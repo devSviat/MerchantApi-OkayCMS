@@ -1,0 +1,336 @@
+/* Відступи: 4 — усередині поля, 8 — між кнопками, 16 — між полями, 24 — між розділами. */
+
+.sviat_ma__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* Готовність */
+.sviat_ma__steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+    list-style: none;
+}
+
+.sviat_ma__step a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px 6px 6px;
+    border: 1px solid var(--ok-line);
+    border-radius: var(--ok-radius-pill);
+    background: var(--ok-surface);
+    color: var(--ok-ink-soft);
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.sviat_ma__step a:hover {
+    border-color: var(--ok-control-line);
+    color: var(--ok-ink);
+}
+
+.sviat_ma__step_mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--ok-sunken);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.sviat_ma__step.is-done a {
+    color: var(--ok-ink);
+}
+
+.sviat_ma__step.is-done .sviat_ma__step_mark {
+    background: var(--ok-success-soft);
+    color: var(--ok-success);
+}
+
+.sviat_ma__step.is-next a {
+    border-color: var(--ok-accent);
+    color: var(--ok-ink);
+    font-weight: 600;
+}
+
+.sviat_ma__step.is-next .sviat_ma__step_mark {
+    background: var(--ok-accent);
+    color: var(--ok-ink-inverse);
+}
+
+/* Розділи */
+.sviat_ma__section + .sviat_ma__section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--ok-line);
+}
+
+.sviat_ma__h {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.sviat_ma__lead {
+    margin: 0 0 8px;
+}
+
+.sviat_ma__hint {
+    margin: 0 0 12px;
+    color: var(--ok-ink-soft);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.45;
+}
+
+.sviat_ma__hint:empty {
+    display: none;
+}
+
+.sviat_ma__field .sviat_ma__hint {
+    margin: 4px 0 0;
+}
+
+.sviat_ma__code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--ok-ink-soft);
+    overflow-wrap: anywhere;
+}
+
+.sviat_ma__summary {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 4px 16px;
+    margin: 0 0 12px;
+}
+
+.sviat_ma__summary dt {
+    color: var(--ok-ink-soft);
+    font-weight: 400;
+}
+
+.sviat_ma__summary dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Форми */
+.sviat_ma__form {
+    max-width: 560px;
+}
+
+.sviat_ma__form--wide {
+    max-width: 720px;
+}
+
+.sviat_ma__field {
+    margin-bottom: 16px;
+}
+
+.sviat_ma__field .heading_label {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.sviat_ma__narrow {
+    max-width: 200px;
+}
+
+.sviat_ma__inline_field {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sviat_ma__inline_field .form-control {
+    flex: 1 1 260px;
+    min-width: 0;
+}
+
+.sviat_ma__buttons,
+.sviat_ma__upload,
+.sviat_ma__check {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.sviat_ma__buttons {
+    margin-top: 4px;
+}
+
+.sviat_ma__upload .input_file_container {
+    width: auto;
+    margin: 0;
+}
+
+.sviat_ma__upload .input_file {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+}
+
+/* Кнопка вибору файлу з ядра вища за btn_small і з нижнім відступом — у ряду з іншими кнопками вирівнюємо. */
+.sviat_ma__upload .input_file_trigger {
+    height: 35px;
+    margin: 0;
+    padding: 0 14px;
+    line-height: 1;
+}
+
+.sviat_ma__upload .input_file_trigger svg {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+}
+
+.sviat_ma__check .sviat_ma__hint {
+    margin: 0;
+}
+
+.sviat_ma__switch {
+    margin-bottom: 16px;
+}
+
+.sviat_ma__modes {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+}
+
+.sviat_ma__modes .okay_type_radio_wrap {
+    min-height: 0;
+    margin: 0;
+}
+
+/* Ядро центрує кружок і дає йому стискатися — з дворядковим описом він з'їжджає. */
+.sviat_ma__modes .okay_type_radio {
+    align-items: flex-start;
+    padding: 6px 0;
+}
+
+.sviat_ma__modes .okay_type_radio::before {
+    flex: none;
+}
+
+.sviat_ma__mode {
+    display: grid;
+    gap: 2px;
+}
+
+.sviat_ma__mode .sviat_ma__hint {
+    margin: 0;
+}
+
+/* Таблиці */
+.sviat_ma__scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+
+.sviat_ma__table {
+    width: 100%;
+    border: 1px solid var(--ok-line-strong);
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+.sviat_ma__table th,
+.sviat_ma__table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--ok-line);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.sviat_ma__table th {
+    background: var(--ok-thead);
+    color: var(--ok-ink-soft);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.sviat_ma__table .is-num {
+    text-align: right;
+}
+
+.sviat_ma__table .sviat_ma__code {
+    white-space: nowrap;
+    overflow-wrap: normal;
+}
+
+.sviat_ma__table .form-control {
+    min-width: 140px;
+}
+
+.sviat_ma__lang {
+    white-space: nowrap;
+}
+
+.sviat_ma__lang .sviat_ma__hint {
+    margin: 4px 0 0;
+    white-space: normal;
+    max-width: 240px;
+}
+
+.sviat_ma__row_action {
+    margin-top: 8px;
+}
+
+.sviat_ma__nowrap {
+    white-space: nowrap;
+}
+
+.sviat_ma__details {
+    min-width: 200px;
+    font-size: 12px;
+    vertical-align: top !important;
+    overflow-wrap: anywhere;
+}
+
+.sviat_ma__issue + .sviat_ma__issue {
+    margin-top: 8px;
+}
+
+.sviat_ma__status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--ok-radius-pill);
+    background: var(--ok-sunken);
+    color: var(--ok-ink-soft);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.sviat_ma__status--ok {
+    background: var(--ok-success-soft);
+    color: var(--ok-success);
+}
+
+.sviat_ma__status--partial {
+    background: var(--ok-warning-soft);
+    color: var(--ok-warning);
+}
+
+.sviat_ma__status--failed {
+    background: var(--ok-danger-soft);
+    color: var(--ok-danger);
+}
