@@ -29,9 +29,17 @@ final class ApiError extends RuntimeException
             }
         }
         $reason ??= $error['status'] ?? null;
-        $reason = is_string($reason) && preg_match('/\A[A-Za-z0-9_.]{1,64}\z/', $reason) ? $reason : 'HTTP_' . $response->status;
+        $reason = is_string($reason) && preg_match('~\A[A-Za-z0-9_./]{1,64}\z~', $reason) ? $reason : 'HTTP_' . $response->status;
 
         return new self($response->status, $reason, self::clean($error['message'] ?? ''));
+    }
+
+    /** Для журналу й адмінки: код, причина і текст Google — без нього «401:UNAUTHENTICATED» не каже, що саме не так. */
+    public function describe(): string
+    {
+        $message = $this->getMessage();
+
+        return "{$this->status}:{$this->reason}" . ($message === '' ? '' : ": {$message}");
     }
 
     public function isQuota(): bool

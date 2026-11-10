@@ -43,13 +43,16 @@ class StatusPoller
 
         $client = $this->clients->create($key, $accountId);
         $rows = [];
-        $summary = ['products' => 0, 'disapproved' => 0, 'demoted' => 0];
+        $summary = ['products' => 0, 'disapproved' => 0, 'demoted' => 0, 'by_source' => []];
         $pageToken = null;
         try {
             for ($page = 0; $page < self::MAX_PAGES; $page++) {
                 $result = $client->listProducts($pageToken);
                 foreach ($result['products'] as $product) {
                     $summary['products']++;
+                    // Скільки товарів у кожному джерелі — за цим видно перехід із файлу: insert переносить товар.
+                    $source = self::sourceOf($product);
+                    $summary['by_source'][$source] = ($summary['by_source'][$source] ?? 0) + 1;
                     $row = self::issueRow($product);
                     if ($row !== null) {
                         $summary[$row['severity'] === 'DISAPPROVED' ? 'disapproved' : 'demoted']++;
@@ -67,7 +70,7 @@ class StatusPoller
                 return;
             }
         } catch (ApiError $e) {
-            $this->settings->setStatusSummary(['error' => "{$e->status} {$e->reason}", 'polled_at' => $this->clock->now()->format(DATE_ATOM)]);
+            $this->settings->setStatusSummary(['error' => $e->describe(), 'polled_at' => $this->clock->now()->format(DATE_ATOM)]);
             return;
         } catch (AuthFailure $e) {
             $this->settings->setStatusSummary(['error' => 'auth: ' . $e->getReason(), 'polled_at' => $this->clock->now()->format(DATE_ATOM)]);
@@ -111,6 +114,17 @@ class StatusPoller
             'severity' => $severity,
             'issues' => (string) json_encode($issues, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $product ресурс Product (Merchant API v1)
+     * @return string ім'я джерела або '' для чужого значення
+     */
+    public static function sourceOf(array $product): string
+    {
+        $source = $product['dataSource'] ?? null;
+
+        return is_string($source) && preg_match('~\Aaccounts/\d+/dataSources/\d+\z~', $source) ? $source : '';
     }
 
     private function pruneRuns(): void

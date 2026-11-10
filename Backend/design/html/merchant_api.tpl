@@ -196,8 +196,10 @@
                                             </select>
                                         </td>
                                         <td>
-                                            <input class="form-control" name="langs[{$ma_l.id|escape}][feed_label]" value="{if $ma_l.target}{$ma_l.target.feed_label|escape}{/if}" maxlength="20"
+                                            <input class="form-control" name="langs[{$ma_l.id|escape}][feed_label]" value="{if $ma_l.target}{$ma_l.target.feed_label|escape}{elseif $ma_l.file_source}{$ma_l.file_source.feed_label|escape}{/if}" maxlength="20"
                                                    aria-label="{$ma_l.name|escape}: {$btr->sviat__merchant_api__col_feed_label|escape}">
+                                            {if $ma_l.file_source}<div class="sviat_ma__hint">{$btr->sviat__merchant_api__file_source_label|sprintf:$ma_l.file_source.display_name:$ma_l.file_source.feed_label|escape}</div>{/if}
+                                            {if $ma_l.label_differs}<div class="sviat_ma__hint text_warning">{$btr->sviat__merchant_api__label_differs|escape}</div>{/if}
                                         </td>
                                         <td>
                                             <select class="form-control" name="langs[{$ma_l.id|escape}][data_source]" aria-label="{$ma_l.name|escape}: {$btr->sviat__merchant_api__col_source|escape}">
@@ -243,7 +245,7 @@
                     <p class="sviat_ma__hint">{$btr->sviat__merchant_api__existing_sources_hint|escape} {$btr->sviat__merchant_api__sources_fetched|escape} {$ma_sources_fetched_at|date_format:'%d.%m.%Y %H:%M'|escape}</p>
                     <div class="sviat_ma__scroll">
                         <table class="sviat_ma__table">
-                            <thead><tr><th>{$btr->sviat__merchant_api__col_name|escape}</th><th>{$btr->sviat__merchant_api__col_input|escape}</th><th>{$btr->sviat__merchant_api__col_language|escape}</th><th>{$btr->sviat__merchant_api__col_feed_label|escape}</th><th>{$btr->sviat__merchant_api__countries|escape}</th></tr></thead>
+                            <thead><tr><th>{$btr->sviat__merchant_api__col_name|escape}</th><th>{$btr->sviat__merchant_api__col_input|escape}</th><th>{$btr->sviat__merchant_api__col_language|escape}</th><th>{$btr->sviat__merchant_api__col_feed_label|escape}</th><th>{$btr->sviat__merchant_api__countries|escape}</th><th class="is-num">{$btr->sviat__merchant_api__col_products|escape}</th></tr></thead>
                             <tbody>
                                 {foreach $ma_sources as $ma_s}
                                     <tr>
@@ -252,11 +254,18 @@
                                         <td>{$ma_s.content_language|default:'—'|escape}</td>
                                         <td>{$ma_s.feed_label|default:'—'|escape}</td>
                                         <td>{$ma_s.countries|join:', '|escape}</td>
+                                        <td class="is-num">{if isset($ma_source_counts[$ma_s.name])}{$ma_source_counts[$ma_s.name]|escape}{else}—{/if}</td>
                                     </tr>
                                 {/foreach}
                             </tbody>
                         </table>
                     </div>
+                    <form method="post" class="sviat_ma__check">
+                        <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
+                        <input type="hidden" name="action" value="poll_statuses">
+                        <button type="submit" class="btn btn_small btn-secondary">{$btr->sviat__merchant_api__poll_statuses|escape}</button>
+                        <span class="sviat_ma__hint">{$btr->sviat__merchant_api__poll_statuses_hint|escape}{if $ma_status.polled_at} {$btr->sviat__merchant_api__status_polled|escape} {$ma_status.polled_at|date_format:'%d.%m.%Y %H:%M'|escape}{/if}</span>
+                    </form>
                 {else}
                     <p class="sviat_ma__hint">{$btr->sviat__merchant_api__sources_none|escape}</p>
                 {/if}
@@ -265,6 +274,7 @@
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__price_label|escape}</h3>
                 <p class="sviat_ma__hint">{$btr->sviat__merchant_api__price_label_hint|escape}</p>
+                {if $ma_price_label_warning}<p class="sviat_ma__hint text_warning">{$btr->sviat__merchant_api__price_label_warning|escape}</p>{/if}
                 <form method="post" class="sviat_ma__form">
                     <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
                     <input type="hidden" name="action" value="save_price_label">
@@ -384,7 +394,12 @@
                                         <td class="is-num">{$ma_r->deferred|escape}</td>
                                         <td class="sviat_ma__details">
                                             {if $ma_r->summary_data.error}<div>{$btr->getTranslation("sviat__merchant_api__setup_`$ma_r->summary_data.error`")|escape}</div>{/if}
-                                            {if $ma_r->summary_data.stopped}<div class="sviat_ma__code">{$ma_r->summary_data.stopped|escape}</div>{/if}
+                                            {if $ma_r->summary_data.stopped}
+                                                <div class="sviat_ma__code">{$ma_r->summary_data.stopped|escape}</div>
+                                                {if $ma_r->stopped_kind == 'access'}<div class="text_attention">{$btr->sviat__merchant_api__stopped_access_hint|escape}</div>{/if}
+                                                {if $ma_r->stopped_kind == 'quota'}<div class="text_attention">{$btr->sviat__merchant_api__stopped_quota_hint|escape}</div>{/if}
+                                            {/if}
+                                            {if $ma_r->status == 'interrupted'}<div class="text_attention">{$btr->sviat__merchant_api__interrupted_hint|escape}</div>{/if}
                                             {if $ma_r->summary_data.counts}<div>{foreach $ma_r->summary_data.counts as $ma_reason => $ma_n}{$ma_reason|escape}: {$ma_n|escape}{if !$ma_n@last}, {/if}{/foreach}</div>{/if}
                                             {if $ma_r->blocked_deletes}<div class="text_attention">{$btr->sviat__merchant_api__blocked_deletes|sprintf:$ma_r->blocked_deletes|escape}</div>{/if}
                                             {if $ma_r->summary_data.errors}{foreach $ma_r->summary_data.errors as $ma_offer => $ma_e}<div>#{$ma_offer|escape}: {$ma_e|escape}</div>{/foreach}{/if}

@@ -18,11 +18,13 @@ use Okay\Modules\Sviat\MerchantApi\Google\InvalidServiceAccountKey;
 use Okay\Modules\Sviat\MerchantApi\Google\MerchantClient;
 use Okay\Modules\Sviat\MerchantApi\Google\MerchantClientFactory;
 use Okay\Modules\Sviat\MerchantApi\Services\CredentialStore;
+use Okay\Modules\Sviat\MerchantApi\Services\FileSourceMatch;
 use Okay\Modules\Sviat\MerchantApi\Services\LanguageTarget;
 use Okay\Modules\Sviat\MerchantApi\Services\ModuleSettings;
 use Okay\Modules\Sviat\MerchantApi\Services\Requirements;
 use Okay\Modules\Sviat\MerchantApi\Http\TransportFailure;
 use Okay\Modules\Sviat\MerchantApi\Mapping\PriceBucketLabel;
+use Okay\Modules\Sviat\MerchantApi\Sync\StatusPoller;
 
 class MerchantApiAdmin extends IndexAdmin
 {
@@ -30,6 +32,8 @@ class MerchantApiAdmin extends IndexAdmin
     private const int MAX_KEY_BYTES = 16384;
     private const int RUNS_SHOWN = 20;
     private const int ISSUES_SHOWN = 300;
+    // Таймаут задачі синхронізації в планувальнику (Init::registerSyncSchedules) і хвилина запасу.
+    private const int RUN_TIMEOUT_SECONDS = 1860;
 
     private CredentialStore $credentials;
     private ModuleSettings $moduleSettings;
@@ -41,6 +45,7 @@ class MerchantApiAdmin extends IndexAdmin
         ModuleSettings $moduleSettings,
         MerchantClientFactory $clients,
         EntityFactory $entityFactory,
+        StatusPoller $statusPoller,
     ) {
         $this->credentials = $credentials;
         $this->moduleSettings = $moduleSettings;
@@ -59,6 +64,8 @@ class MerchantApiAdmin extends IndexAdmin
                 'save_price_label' => $this->savePriceLabel(),
                 'save_sync' => $this->saveSync(),
                 'confirm_deletes' => $this->confirmDeletes(),
+                // Під час переходу з файлу кількість товарів у джерелах потрібна зараз, а не о 06:40.
+                'poll_statuses' => $this->done('statuses_polled', fn() => $statusPoller->poll()),
                 default => null,
             };
         }
@@ -209,9 +216,10 @@ class MerchantApiAdmin extends IndexAdmin
             $this->fail('create_source');
             return;
         }
-        $this->withClient(function (MerchantClient $client) use ($target, $targets): void {
+        $fileSource = FileSourceMatch::forLanguage($this->moduleSettings->sourcesCache()['sources'], $target->contentLanguage);
+        $this->withClient(function (MerchantClient $client) use ($target, $targets, $fileSource): void {
             $name = trim((string) $this->settings->get('site_name')) . ' API ' . strtoupper($target->contentLanguage);
-            $created = $client->createApiDataSource($name, $target->contentLanguage, $target->feedLabel, $this->moduleSettings->countries());
+            $created = $client->createApiDataSource($name, $target->contentLanguage, $target->feedLabel, $this->moduleSettings->countries(), $fileSource['destinations'] ?? []);
             $sourceName = (string) ($created['name'] ?? '');
             $bound = LanguageTarget::create($target->langId, $target->contentLanguage, $target->feedLabel, $target->feedId, $sourceName);
             if ($bound === null) {
@@ -326,6 +334,7 @@ class MerchantApiAdmin extends IndexAdmin
         foreach ($this->languages->getAllLanguages() as $language) {
             $langId = (int) $language->id;
             $target = $targets[$langId] ?? null;
+            $fileSource = FileSourceMatch::forLanguage($sources['sources'], self::contentLanguage($language));
             $languages[] = [
                 'id' => $langId,
                 'label' => (string) $language->label,
@@ -339,13 +348,22 @@ class MerchantApiAdmin extends IndexAdmin
                 'blocked_deletes' => count($this->moduleSettings->pendingDeletes($langId)) ?: null,
                 'removing' => $target !== null && $target->removing,
                 'source_cached' => $target?->dataSource === null || isset($apiSources[$target->dataSource]),
+                'file_source' => $fileSource,
+                // Мітка, що розходиться з чинним файловим джерелом, створить у Google нові товари поруч зі старими.
+                'label_differs' => $fileSource !== null && $target !== null && !$target->removing && $fileSource['feed_label'] !== null && $fileSource['feed_label'] !== $target->feedLabel,
             ];
         }
 
         $runs = [];
+        $staleBefore = time() - self::RUN_TIMEOUT_SECONDS;
         foreach ($runsEntity->find(['limit' => self::RUNS_SHOWN]) as $run) {
             $summary = json_decode((string) $run->summary, true);
             $run->summary_data = is_array($summary) ? $summary : [];
+            // «running» без завершення довше за таймаут — процес обірвано, рядок уже ніхто не оновить.
+            if ($run->status === 'running' && strtotime((string) $run->started_at) < $staleBefore) {
+                $run->status = 'interrupted';
+            }
+            $run->stopped_kind = self::stoppedKind((string) ($run->summary_data['stopped'] ?? ''));
             $runs[] = $run;
         }
 
@@ -375,6 +393,9 @@ class MerchantApiAdmin extends IndexAdmin
         $this->design->assign('ma_sources', $sources['sources']);
         $this->design->assign('ma_sources_fetched_at', $sources['fetched_at']);
         $this->design->assign('ma_price_label', $this->moduleSettings->priceLabelRaw());
+        // Цінову мітку файлових джерел зазвичай ставить правило Merchant Center, а на API-джерело воно не діє.
+        $this->design->assign('ma_price_label_warning', $this->moduleSettings->priceLabel() === null && array_filter(array_column($languages, 'file_source')) !== []);
+        $this->design->assign('ma_source_counts', is_array($this->moduleSettings->statusSummary()['by_source'] ?? null) ? $this->moduleSettings->statusSummary()['by_source'] : []);
         $this->design->assign('ma_paused', $this->moduleSettings->isPaused());
         $this->design->assign('ma_dry_run', $this->moduleSettings->isDryRun());
         $this->design->assign('ma_ops_per_run', $this->moduleSettings->opsPerRun());
@@ -427,6 +448,16 @@ class MerchantApiAdmin extends IndexAdmin
         // Джерело без мови й мітки приймає будь-які; з ними — лише свою пару.
         return ($source['content_language'] ?? null) === null
             || ($source['content_language'] === $target->contentLanguage && ($source['feed_label'] ?? null) === $target->feedLabel);
+    }
+
+    /** До якої підказки веде причина зупинки: доступ і реєстрація чи квота. */
+    private static function stoppedKind(string $stopped): ?string
+    {
+        return match (true) {
+            preg_match('/\A(401|403):|\Aauth:/', $stopped) === 1 => 'access',
+            str_starts_with($stopped, '429:') => 'quota',
+            default => null,
+        };
     }
 
     private static function contentLanguage(object $language): string
