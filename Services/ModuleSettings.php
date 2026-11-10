@@ -230,6 +230,7 @@ class ModuleSettings
                 'feed_label' => is_string($row['feed_label'] ?? null) ? $row['feed_label'] : null,
                 'countries' => array_values(array_filter((array) ($row['countries'] ?? []), is_string(...))),
                 'primary' => ($row['primary'] ?? false) === true,
+                'destinations' => self::destinations($row['destinations'] ?? null),
             ];
         }
 
@@ -257,6 +258,7 @@ class ModuleSettings
                 'feed_label' => is_string($primary['feedLabel'] ?? null) ? $primary['feedLabel'] : null,
                 'countries' => array_values(array_filter((array) ($primary['countries'] ?? []), is_string(...))),
                 'primary' => $primary !== null,
+                'destinations' => self::destinations($primary['destinations'] ?? null),
             ];
         }
         $this->settings->set(self::PREFIX . 'sources_cache', ['fetched_at' => $fetchedAt->format(DATE_ATOM), 'sources' => $rows]);
@@ -274,6 +276,25 @@ class ModuleSettings
     public function setStatusSummary(array $summary): void
     {
         $this->settings->set(self::PREFIX . 'status_summary', $summary);
+    }
+
+    /**
+     * Способи показу джерела ({destination, state}) — лише ті, що схожі на значення Google.
+     *
+     * @return list<array{destination: string, state: string}>
+     */
+    private static function destinations(mixed $raw): array
+    {
+        $rows = [];
+        foreach (is_array($raw) ? $raw : [] as $row) {
+            $destination = is_array($row) ? ($row['destination'] ?? null) : null;
+            $state = is_array($row) ? ($row['state'] ?? null) : null;
+            if (is_string($destination) && preg_match('/\A[A-Z_]{1,40}\z/', $destination) && in_array($state, ['ENABLED', 'DISABLED'], true)) {
+                $rows[] = ['destination' => $destination, 'state' => $state];
+            }
+        }
+
+        return $rows;
     }
 
     private function string(string $name): string

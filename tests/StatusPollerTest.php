@@ -59,7 +59,7 @@ class StatusPollerTest extends TestCase
         $this->values[ModuleSettings::PREFIX . 'sources_cache'] = ['sources' => [['name' => 'accounts/1/dataSources/9'], 'junk', ['name' => 'x']]];
         $this->assertSame([[
             'name' => 'accounts/1/dataSources/9', 'display_name' => '', 'input' => '', 'content_language' => null,
-            'feed_label' => null, 'countries' => [], 'primary' => false,
+            'feed_label' => null, 'countries' => [], 'primary' => false, 'destinations' => [],
         ]], $settings->sourcesCache()['sources']);
     }
 

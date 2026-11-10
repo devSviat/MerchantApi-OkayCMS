@@ -334,3 +334,8 @@
     background: var(--ok-danger-soft);
     color: var(--ok-danger);
 }
+
+.sviat_ma__status--interrupted {
+    background: var(--ok-warning-soft);
+    color: var(--ok-warning);
+}

@@ -11,8 +11,20 @@ class EntityRunLog implements RunLog
     {
     }
 
-    public function record(array $run): void
+    public function start(array $run): ?int
     {
-        $this->entityFactory->get(MerchantApiRunsEntity::class)->add($run);
+        $id = $this->entityFactory->get(MerchantApiRunsEntity::class)->add($run);
+
+        return is_numeric($id) && (int) $id > 0 ? (int) $id : null;
+    }
+
+    public function finish(?int $id, array $run): void
+    {
+        $entity = $this->entityFactory->get(MerchantApiRunsEntity::class);
+        if ($id === null) {
+            $entity->add($run);
+            return;
+        }
+        $entity->update($id, $run);
     }
 }

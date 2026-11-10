@@ -38,6 +38,8 @@ class SyncRunnerTest extends TestCase
 
     /** @var list<array<string, mixed>> */
     private array $runs = [];
+    /** @var list<array<string, mixed>> */
+    private array $started = [];
 
     private FakeGoogle $google;
     private DateTimeImmutable $now;
@@ -200,7 +202,7 @@ class SyncRunnerTest extends TestCase
         $this->store->rows = [];
         $this->google->failures = array_fill(0, 9, FakeGoogle::error(503, 'UNAVAILABLE', 'BACKEND_ERROR'));
         $this->runner()->runLanguage(self::LANG);
-        $this->assertSame('503:BACKEND_ERROR', $this->summary(1)['stopped']);
+        $this->assertSame('503:BACKEND_ERROR: fake', $this->summary(1)['stopped']);
     }
 
     /** Рев'ю M7: однакова відмова раз за разом — це налаштування, а не товари. */
@@ -214,7 +216,7 @@ class SyncRunnerTest extends TestCase
         $this->runner()->runLanguage(self::LANG);
 
         $this->assertSame(5, $this->runs[0]['failed']);
-        $this->assertSame('repeated:400:FEED_LABEL_MISMATCH', $this->summary(0)['stopped']);
+        $this->assertSame('repeated:400:FEED_LABEL_MISMATCH: fake', $this->summary(0)['stopped']);
     }
 
     public function testInsertIntoMissingSourceStopsRun(): void
@@ -240,7 +242,7 @@ class SyncRunnerTest extends TestCase
 
         $this->assertSame('partial', $this->runs[1]['status']);
         $this->assertSame(1, $this->runs[1]['sent']);
-        $this->assertSame('429:QUOTA_REQUEST_RATE_TOO_HIGH', $this->summary(1)['stopped']);
+        $this->assertSame('429:QUOTA_REQUEST_RATE_TOO_HIGH: fake', $this->summary(1)['stopped']);
         $this->assertSame([], array_filter($this->store->states(self::LANG), fn(ItemState $s) => $s->attempts > 0), 'quota is not a product error');
     }
 
@@ -306,6 +308,18 @@ class SyncRunnerTest extends TestCase
         $this->assertSame(['998' => ['bad_offer_id']], $this->summary(0)['invalid']);
     }
 
+    /** Рядок журналу з'являється до роботи: запуск, обірваний планувальником, інакше не лишав би сліду. */
+    public function testRunRowIsWrittenAsRunningBeforeWork(): void
+    {
+        $this->buildFails = new \RuntimeException('boom');
+
+        $this->runner()->runLanguage(self::LANG);
+
+        $this->assertSame('running', $this->started[0]['status']);
+        $this->assertCount(1, $this->runs);
+        $this->assertSame('failed', $this->runs[0]['status']);
+    }
+
     public function testLiveRunWithoutKeyFailsBeforeAnyCall(): void
     {
         $this->values[CredentialStore::KEY] = '';
@@ -340,9 +354,14 @@ class SyncRunnerTest extends TestCase
             {
             }
 
-            public function record(array $run): void
+            public function start(array $run): ?int
             {
-                $this->test->recordRun($run);
+                return $this->test->startRun($run);
+            }
+
+            public function finish(?int $id, array $run): void
+            {
+                $this->test->finishRun($id, $run);
             }
         };
         $factory = new class ($this->google) extends MerchantClientFactory {
@@ -388,8 +407,17 @@ class SyncRunnerTest extends TestCase
     }
 
     /** @param array<string, mixed> $run */
-    public function recordRun(array $run): void
+    public function startRun(array $run): int
     {
+        $this->started[] = $run;
+
+        return count($this->started);
+    }
+
+    /** Завершення оновлює рядок, створений на старті цього ж запуску, а не додає новий. */
+    public function finishRun(?int $id, array $run): void
+    {
+        $this->assertSame(count($this->started), $id, 'finish() must update the row start() created');
         $this->runs[] = $run;
     }
 

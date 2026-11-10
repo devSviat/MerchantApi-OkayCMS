@@ -66,22 +66,33 @@ final class MerchantClient
      * Основне API-джерело однієї мови. Мова й мітка незмінні після створення.
      *
      * @param list<string> $countries CLDR, напр. ['UA']
+     * @param list<array{destination: string, state: string}> $destinations з файлового джерела, яке API-джерело
+     *        заміняє; без них Google ставить свої типові способи показу, і товари могли б зникнути з реклами
      * @return array<string, mixed>
      */
-    public function createApiDataSource(string $displayName, string $contentLanguage, string $feedLabel, array $countries): array
+    public function createApiDataSource(string $displayName, string $contentLanguage, string $feedLabel, array $countries, array $destinations = []): array
     {
+        $primary = [
+            'contentLanguage' => $contentLanguage,
+            'feedLabel' => $feedLabel,
+            'countries' => $countries,
+        ];
+        if ($destinations !== []) {
+            $primary['destinations'] = $destinations;
+        }
+
         // Створення не ідемпотентне: повтор після таймауту міг би лишити два джерела з однаковою мовою й міткою.
         return $this->call('POST', "datasources/v1/accounts/{$this->accountId}/dataSources", [], [
             'displayName' => mb_substr($displayName, 0, 100),
-            'primaryProductDataSource' => [
-                'contentLanguage' => $contentLanguage,
-                'feedLabel' => $feedLabel,
-                'countries' => $countries,
-            ],
+            'primaryProductDataSource' => $primary,
         ], retry: false);
     }
 
-    /** Одноразова реєстрація проєкту Google Cloud; без неї решта викликів — 401. */
+    /**
+     * Одноразова реєстрація проєкту Google Cloud. До неї решта викликів — 401 UNAUTHENTICATED «GCP project …
+     * is not registered»; після неї, доки в акаунті немає підтвердженої людини з роллю API_DEVELOPER, —
+     * «should have at least one user with 'API_DEVELOPER' role» (обидва бачили 10.11.2026 на живому акаунті).
+     */
     public function registerGcp(string $developerEmail): array
     {
         return $this->call('POST', "accounts/v1/accounts/{$this->accountId}/developerRegistration:registerGcp", [], ['developerEmail' => $developerEmail]);

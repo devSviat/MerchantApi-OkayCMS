@@ -25,6 +25,7 @@ class SyncRunner
     public const string STATUS_DRY = 'dry';
     public const string STATUS_PARTIAL = 'partial';
     public const string STATUS_FAILED = 'failed';
+    public const string STATUS_RUNNING = 'running';
 
     // Скільки прикладів помилок і невалідних товарів класти в журнал запуску.
     private const int SAMPLE = 20;
@@ -32,6 +33,8 @@ class SyncRunner
     private const int TRANSIENT_STOP = 3;
     // Стільки поспіль однакових відмов — це вже не товари, а налаштування (джерело, мітка, права).
     private const int REPEATED_STOP = 5;
+
+    private ?int $runId = null;
 
     public function __construct(
         private ModuleSettings $settings,
@@ -54,6 +57,7 @@ class SyncRunner
 
         $startedAt = $this->clock->now();
         $run = ['lang_id' => $langId, 'started_at' => $startedAt->format('Y-m-d H:i:s'), 'dry_run' => (int) $this->settings->isDryRun()];
+        $this->runId = $this->log->start($run + ['status' => self::STATUS_RUNNING]);
         try {
             $this->run($target, $startedAt, $run);
         } catch (Throwable $e) {
@@ -209,7 +213,7 @@ class SyncRunner
                 }
                 // Квота, ключ/доступ, 404 на вставці (джерела немає): далі слати немає сенсу.
                 if ($e->isQuota() || $e->isFatal() || ($operation->type === Operation::INSERT && $e->status === 404)) {
-                    $result['stopped'] = "{$e->status}:{$e->reason}";
+                    $result['stopped'] = $e->describe();
                     break;
                 }
 
@@ -224,11 +228,11 @@ class SyncRunner
                 $sameInRow = $lastReason === $e->reason ? $sameInRow + 1 : 1;
                 $lastReason = $e->reason;
                 if ($e->status === 0 || $transientInRow >= self::TRANSIENT_STOP) {
-                    $result['stopped'] = "{$e->status}:{$e->reason}";
+                    $result['stopped'] = $e->describe();
                     break;
                 }
                 if ($sameInRow >= self::REPEATED_STOP) {
-                    $result['stopped'] = "repeated:{$e->status}:{$e->reason}";
+                    $result['stopped'] = 'repeated:' . $e->describe();
                     break;
                 }
             }
@@ -301,7 +305,7 @@ class SyncRunner
      */
     private function finish(array $run, string $status, array $summary): void
     {
-        $this->log->record($run + [
+        $this->log->finish($this->runId, $run + [
             'status' => $status,
             'finished_at' => $this->clock->now()->format('Y-m-d H:i:s'),
             'summary' => json_encode($summary, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR),
