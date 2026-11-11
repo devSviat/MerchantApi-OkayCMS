@@ -3,7 +3,9 @@
 namespace Modules\Sviat\MerchantApi;
 
 use DateTimeImmutable;
+use Okay\Core\EntityFactory;
 use Okay\Core\Settings;
+use Okay\Entities\FeaturesEntity;
 use Okay\Modules\Sviat\MerchantApi\Backend\Controllers\MerchantApiAdmin;
 use Okay\Modules\Sviat\MerchantApi\Services\CatalogSettings;
 use Okay\Modules\Sviat\MerchantApi\Services\ModuleSettings;
@@ -91,6 +93,18 @@ class AdminCatalogFormTest extends TestCase
         $this->assertSame([null, 'evil:x'], MerchantApiAdmin::splitMessage('evil:x'));
         $this->assertSame('catalog', MerchantApiAdmin::sectionOf('save_catalog'));
         $this->assertNull(MerchantApiAdmin::sectionOf('unknown'));
+    }
+
+    /** Збирач бере характеристики лише з видимих властивостей — прихованої у виборі бути не може. */
+    public function testDetailFeaturePickerListsOnlyVisibleFeatures(): void
+    {
+        $features = $this->createMock(FeaturesEntity::class);
+        $features->expects($this->once())->method('noLimit')->willReturnSelf();
+        $features->expects($this->once())->method('find')->with(['visible' => 1])->willReturn([]);
+        $factory = $this->createStub(EntityFactory::class);
+        $factory->method('get')->willReturn($features);
+
+        $this->assertSame([], MerchantApiAdmin::detailFeatures($factory));
     }
 
     private function settingsStub(): Settings
