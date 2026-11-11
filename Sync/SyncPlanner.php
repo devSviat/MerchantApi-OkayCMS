@@ -21,6 +21,12 @@ final readonly class SyncPlanner
      */
     private const array REQUIRED = ['title', 'link', 'imageLink', 'price', 'availability'];
 
+    /** Причини в лічильниках плану (журнал запуску, «Деталі»), у порядку показу. */
+    public const array COUNT_REASONS = [
+        Operation::NEW, Operation::CRITICAL, 'critical_cooldown', Operation::CHANGED, 'cooldown',
+        Operation::REFRESH, Operation::RETRY, 'backoff', Operation::GONE, 'unchanged',
+    ];
+
     private const array PRIORITY = [
         Operation::NEW => 0,
         Operation::CRITICAL => 0,

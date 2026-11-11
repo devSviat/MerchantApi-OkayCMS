@@ -58,7 +58,20 @@
         observer.observe(box);
     }
 
+    // Ціле число без знаків: недозволений символ просто не вводиться, а вставка з літерами відхиляється цілком.
+    // Вирізати зайве вже після вводу не можна: «150.5» тихо стало б 1505.
+    function digitsOnly(input) {
+        input.addEventListener('beforeinput', function (event) {
+            // Для вставки й перетягування Chrome дає текст у dataTransfer, а data лишає порожнім.
+            var text = event.data !== null ? event.data : (event.dataTransfer ? event.dataTransfer.getData('text/plain') : null);
+            if (typeof text === 'string' && /\D/.test(text)) {
+                event.preventDefault();
+            }
+        });
+    }
+
     function init() {
+        document.querySelectorAll('.fn_ma_digits').forEach(digitsOnly);
         document.querySelectorAll('.sviat_ma__product_picker .okay_list_body').forEach(watch);
         document.querySelectorAll('.fn_ma_stats').forEach(loadStats);
     }

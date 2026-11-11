@@ -31,6 +31,7 @@ use Okay\Modules\Sviat\MerchantApi\Http\TransportFailure;
 use Okay\Modules\Sviat\MerchantApi\Mapping\PriceBucketLabel;
 use Okay\Modules\Sviat\MerchantApi\Sync\EntityRunLog;
 use Okay\Modules\Sviat\MerchantApi\Sync\StatusPoller;
+use Okay\Modules\Sviat\MerchantApi\Sync\SyncPlanner;
 use Okay\Modules\Sviat\MerchantApi\Sync\SyncRunner;
 
 class MerchantApiAdmin extends IndexAdmin
@@ -506,6 +507,7 @@ class MerchantApiAdmin extends IndexAdmin
         $this->design->assign('ma_dry_run', $this->moduleSettings->isDryRun());
         $this->design->assign('ma_ops_per_run', $this->moduleSettings->opsPerRun());
         $this->design->assign('ma_runs', $runs);
+        $this->design->assign('ma_count_reasons', SyncPlanner::COUNT_REASONS);
         $this->design->assign('ma_status', $this->moduleSettings->statusSummary());
         $this->design->assign('ma_mode', $this->moduleSettings->isPaused() ? 'paused' : ($this->moduleSettings->isDryRun() ? 'dry' : 'live'));
         $this->design->assign('ma_steps', $this->steps($languages, $sources['fetched_at']));

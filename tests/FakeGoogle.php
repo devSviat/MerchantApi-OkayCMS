@@ -27,6 +27,9 @@ final class FakeGoogle implements HttpTransport
 
     public int $tokens = 0;
 
+    /** @var list<array<string, mixed>> ресурси DataSource, які віддає список джерел */
+    public array $dataSources = [];
+
     public function send(string $method, string $url, array $headers = [], ?string $body = null): HttpResponse
     {
         CurlTransport::assertAllowed($url);
@@ -54,6 +57,12 @@ final class FakeGoogle implements HttpTransport
             $this->sourceOf[$id] = $source;
 
             return new HttpResponse(200, json_encode($input + ['name' => "accounts/123/productInputs/{$id}"]));
+        }
+        if ($method === 'GET' && str_ends_with($path, '/dataSources')) {
+            return new HttpResponse(200, json_encode(['dataSources' => $this->dataSources]));
+        }
+        if ($method === 'GET' && str_ends_with($path, '/products')) {
+            return new HttpResponse(200, json_encode(['products' => []]));
         }
         if ($method === 'DELETE' && preg_match('~/productInputs/([A-Za-z0-9_-]+)$~', $path, $m)) {
             if (!isset($this->products[$m[1]]) || $this->sourceOf[$m[1]] !== $source) {

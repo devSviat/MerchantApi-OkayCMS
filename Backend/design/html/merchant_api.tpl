@@ -413,7 +413,8 @@
                         </div>
                         <div class="sviat_ma__field">
                             <label class="heading_label" for="sviat_ma_min">{$btr->sviat__merchant_api__catalog_min_price|escape}</label>
-                            <input id="sviat_ma_min" class="form-control" name="min_price" inputmode="numeric" pattern="[0-9]*" value="{$ma_c->minPrice|escape}" placeholder="{$btr->sviat__merchant_api__catalog_min_price_none|escape}">
+                            <input id="sviat_ma_min" class="form-control fn_ma_digits" name="min_price" inputmode="numeric" pattern="[0-9]*" maxlength="9" autocomplete="off" value="{$ma_c->minPrice|escape}" placeholder="{$btr->sviat__merchant_api__catalog_min_price_none|escape}" aria-describedby="sviat_ma_min_hint">
+                            <p class="sviat_ma__hint" id="sviat_ma_min_hint">{$btr->sviat__merchant_api__catalog_min_price_hint|escape}</p>
                         </div>
                     </div>
                     <details class="sviat_ma__more"{if $ma_c->detailFeatureIds} open{/if}>
@@ -538,7 +539,7 @@
                                                 {if $ma_r->stopped_kind == 'quota'}<div class="text_attention">{$btr->sviat__merchant_api__stopped_quota_hint|escape}</div>{/if}
                                             {/if}
                                             {if $ma_r->status == 'interrupted'}<div class="text_attention">{$btr->sviat__merchant_api__interrupted_hint|escape}</div>{/if}
-                                            {if $ma_r->summary_data.counts}<div>{foreach $ma_r->summary_data.counts as $ma_reason => $ma_n}{$ma_reason|escape}: {$ma_n|escape}{if !$ma_n@last}, {/if}{/foreach}</div>{/if}
+                                            {if $ma_r->summary_data.counts}<div class="sviat_ma__counts">{foreach $ma_count_reasons as $ma_reason}{if isset($ma_r->summary_data.counts[$ma_reason])}{$ma_hint = $btr->getTranslation("sviat__merchant_api__count_`$ma_reason`_hint")}<span class="sviat_ma__count_item" title="{$ma_hint|escape}">{$btr->getTranslation("sviat__merchant_api__count_`$ma_reason`")|escape} {$ma_r->summary_data.counts[$ma_reason]|escape}</span>{/if}{/foreach}</div>{/if}
                                             {if $ma_r->blocked_deletes}<div class="text_attention">{$btr->sviat__merchant_api__blocked_deletes|sprintf:$ma_r->blocked_deletes|escape}</div>{/if}
                                             {if $ma_r->summary_data.errors}{foreach $ma_r->summary_data.errors as $ma_offer => $ma_e}<div>#{$ma_offer|escape}: {$ma_e|escape}</div>{/foreach}{/if}
                                             {if $ma_r->summary_data.invalid}{foreach $ma_r->summary_data.invalid as $ma_offer => $ma_why}<div>#{$ma_offer|escape}: {$ma_why|join:', '|escape}</div>{/foreach}{/if}
