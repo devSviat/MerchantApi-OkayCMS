@@ -14,14 +14,18 @@ final class CurlTransport implements HttpTransport
     private const int CONNECT_TIMEOUT = 10;
     private const int TIMEOUT = 60;
 
+    /**
+     * Один дескриптор на процес: curl_reset() скидає опції, але лишає живе з'єднання, тож запуск із сотень
+     * вставок не робить TCP і TLS заново на кожен товар (заміряно: ~230 → ~150 мс на запит).
+     */
+    private ?\CurlHandle $handle = null;
+
     public function send(string $method, string $url, array $headers = [], ?string $body = null): HttpResponse
     {
         self::assertAllowed($url);
 
-        $handle = curl_init($url);
-        if ($handle === false) {
-            throw new TransportFailure('curl_init failed');
-        }
+        $handle = $this->handle ??= curl_init() ?: throw new TransportFailure('curl_init failed');
+        curl_reset($handle);
 
         $lines = [];
         foreach ($headers as $name => $value) {
@@ -30,6 +34,7 @@ final class CurlTransport implements HttpTransport
 
         $responseHeaders = [];
         curl_setopt_array($handle, [
+            CURLOPT_URL => $url,
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_HTTPHEADER => $lines,
             CURLOPT_RETURNTRANSFER => true,
@@ -49,6 +54,7 @@ final class CurlTransport implements HttpTransport
                 return strlen($line);
             },
         ]);
+        // Після curl_reset() тіло попереднього запиту вже скинуте; без тіла тут — запит без тіла (DELETE, GET).
         if ($body !== null) {
             curl_setopt($handle, CURLOPT_POSTFIELDS, $body);
         }

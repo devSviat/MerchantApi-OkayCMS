@@ -455,12 +455,23 @@
                     </fieldset>
                     <div class="sviat_ma__field">
                         <label class="heading_label" for="sviat_ma_ops">{$btr->sviat__merchant_api__ops_per_run|escape}</label>
-                        <input class="form-control sviat_ma__narrow" id="sviat_ma_ops" name="ops_per_run" type="number" min="1" max="5000" value="{$ma_ops_per_run|escape}" aria-describedby="sviat_ma_ops_hint">
+                        <select class="selectpicker form-control" id="sviat_ma_ops" name="ops_per_run" data-width="fit" aria-describedby="sviat_ma_ops_hint">
+                            {if !in_array($ma_ops_per_run, $ma_ops_choices)}<option value="{$ma_ops_per_run|escape}" selected>{$btr->sviat__merchant_api__ops_current|sprintf:$ma_ops_per_run|escape}</option>{/if}
+                            {foreach $ma_ops_choices as $ma_ops}
+                                <option value="{$ma_ops|escape}"{if $ma_ops == $ma_ops_per_run} selected{/if}>{$ma_ops|escape} — {$btr->getTranslation("sviat__merchant_api__ops_choice_`$ma_ops`")|escape}</option>
+                            {/foreach}
+                        </select>
                         <p class="sviat_ma__hint" id="sviat_ma_ops_hint">{$btr->sviat__merchant_api__ops_per_run_hint|escape}</p>
                     </div>
                     <div class="sviat_ma__buttons">
                         <button type="submit" class="btn btn_small btn_blue">{$btr->general_apply|escape}</button>
                     </div>
+                </form>
+                <form method="post" class="sviat_ma__run_now">
+                    <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
+                    <input type="hidden" name="action" value="run_now">
+                    <button type="submit" class="btn btn_small btn-secondary"{if $ma_paused || $ma_run_pending} disabled{/if}>{$btr->sviat__merchant_api__run_now|escape}</button>
+                    <span class="sviat_ma__hint">{if $ma_run_pending}{$btr->sviat__merchant_api__run_now_pending|escape}{elseif $ma_paused}{$btr->sviat__merchant_api__run_now_paused|escape}{else}{$btr->sviat__merchant_api__run_now_hint|escape}{/if}</span>
                 </form>
             </section>
 

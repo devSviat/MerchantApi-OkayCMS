@@ -129,10 +129,11 @@ class Init extends AbstractInit
             $langId = (int) $langId;
             $this->registerSchedule(
                 new Schedule(static function (SyncRunner $runner) use ($langId): void {
-                    $runner->runLanguage($langId);
+                    $runner->runIfDue($langId);
                 })
                     ->name("MerchantApi: sync language {$langId}")
-                    ->time('*/15 * * * *')
+                    // Щохвилини лише перевірка: працює раз на 15 хвилин або одразу після «Запустити зараз».
+                    ->time('* * * * *')
                     ->overlap(false)
                     ->timeout(1800)
             );

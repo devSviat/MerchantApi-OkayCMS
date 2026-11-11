@@ -29,7 +29,9 @@ use Okay\Modules\Sviat\MerchantApi\Services\ModuleSettings;
 use Okay\Modules\Sviat\MerchantApi\Services\Requirements;
 use Okay\Modules\Sviat\MerchantApi\Http\TransportFailure;
 use Okay\Modules\Sviat\MerchantApi\Mapping\PriceBucketLabel;
+use Okay\Modules\Sviat\MerchantApi\Sync\EntityRunLog;
 use Okay\Modules\Sviat\MerchantApi\Sync\StatusPoller;
+use Okay\Modules\Sviat\MerchantApi\Sync\SyncRunner;
 
 class MerchantApiAdmin extends IndexAdmin
 {
@@ -52,6 +54,7 @@ class MerchantApiAdmin extends IndexAdmin
         'save_price_label' => 'price_label',
         'save_catalog' => 'catalog',
         'save_sync' => 'sync',
+        'run_now' => 'sync',
         'confirm_deletes' => 'state',
     ];
 
@@ -70,6 +73,7 @@ class MerchantApiAdmin extends IndexAdmin
         StatusPoller $statusPoller,
         CatalogStats $catalogStats,
         CatalogProducts $catalogProducts,
+        EntityRunLog $runLog,
     ) {
         $this->credentials = $credentials;
         $this->moduleSettings = $moduleSettings;
@@ -99,6 +103,7 @@ class MerchantApiAdmin extends IndexAdmin
                 'create_source' => $this->createSource(),
                 'save_price_label' => $this->savePriceLabel(),
                 'save_sync' => $this->saveSync(),
+                'run_now' => $this->runNow(),
                 'confirm_deletes' => $this->confirmDeletes(),
                 // Під час переходу з файлу кількість товарів у джерелах потрібна зараз, а не о 06:40.
                 'poll_statuses' => $this->done('statuses_polled', fn() => $statusPoller->poll(manual: true)),
@@ -108,6 +113,12 @@ class MerchantApiAdmin extends IndexAdmin
         }
 
         $this->assignView($requirements, $entityFactory);
+        $lastStarts = [];
+        foreach (array_keys($this->moduleSettings->languages()) as $langId) {
+            $lastStarts[$langId] = $runLog->lastStartedAt($langId);
+        }
+        $this->design->assign('ma_run_pending', !$this->moduleSettings->isPaused() && SyncRunner::requestPending($this->moduleSettings->runRequestedAt(), $lastStarts));
+        $this->design->assign('ma_ops_choices', ModuleSettings::OPS_CHOICES);
         $this->assignCatalog($entityFactory, $catalogProducts);
         $this->response->setContent($this->design->fetch('merchant_api.tpl'));
     }
@@ -305,8 +316,29 @@ class MerchantApiAdmin extends IndexAdmin
         }
         $this->moduleSettings->setPaused($mode === 'paused');
         $this->moduleSettings->setDryRun($mode !== 'live');
-        $this->moduleSettings->setOpsPerRun((int) $this->request->post('ops_per_run'));
+        $ops = self::opsFromForm($this->request->post('ops_per_run'));
+        if ($ops === null) {
+            $this->fail('ops_per_run');
+            return;
+        }
+        $this->moduleSettings->setOpsPerRun($ops);
         $this->done('saved');
+    }
+
+    public static function opsFromForm(mixed $value): ?int
+    {
+        return is_string($value) && ctype_digit($value) && in_array((int) $value, ModuleSettings::OPS_CHOICES, true) ? (int) $value : null;
+    }
+
+    /** На паузі запит не має сенсу: задача мови тоді нічого не робить, і кнопка мовчки б «не спрацювала». */
+    private function runNow(): void
+    {
+        if ($this->moduleSettings->isPaused()) {
+            $this->fail('run_now_paused');
+            return;
+        }
+        $this->moduleSettings->requestRun(new DateTimeImmutable());
+        $this->done('run_requested');
     }
 
     /**
