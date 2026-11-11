@@ -38,6 +38,7 @@ $lang['sviat__merchant_api__col_feed_label'] = 'Feed label';
 $lang['sviat__merchant_api__col_source'] = 'API source';
 $lang['sviat__merchant_api__source_none'] = '— not selected —';
 $lang['sviat__merchant_api__source_mismatch'] = 'The source language or label does not match this language — save again with the right source.';
+$lang['sviat__merchant_api__source_not_cached'] = 'This source is not in the list the module last read from Google yet. Press “Check connection” on the Connection tab.';
 $lang['sviat__merchant_api__create_source'] = 'Create API source';
 $lang['sviat__merchant_api__existing_sources'] = 'Data sources in Merchant Center';
 $lang['sviat__merchant_api__sources_fetched'] = 'Read at:';

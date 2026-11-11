@@ -173,7 +173,7 @@
                 <form method="post" id="sviat_ma_languages_form">
                     <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
                     <input type="hidden" name="action" value="save_languages">
-                    <div class="sviat_ma__scroll">
+                    <div class="sviat_ma__scroll sviat_ma__scroll--wide-visible">
                         <table class="sviat_ma__table">
                             <thead>
                                 <tr>
@@ -216,7 +216,9 @@
                                                     {/if}
                                                 {/foreach}
                                             </select>
-                                            {if !$ma_l.source_ok}<div class="sviat_ma__hint text_warning">{$btr->sviat__merchant_api__source_mismatch|escape}</div>{/if}
+                                            {* Джерела немає в збереженому списку — його мову й мітку модуль не знає, тож про розбіжність казати рано. *}
+                                            {if !$ma_l.source_cached}<div class="sviat_ma__hint text_warning">{$btr->sviat__merchant_api__source_not_cached|escape}</div>
+                                            {elseif !$ma_l.source_ok}<div class="sviat_ma__hint text_warning">{$btr->sviat__merchant_api__source_mismatch|escape}</div>{/if}
                                             {if $ma_l.target && !$ma_l.target.data_source && !$ma_l.removing}
                                                 {* Окрема форма поза таблицею: вкладені форми HTML не дозволяє, кнопка прив'язана атрибутом form. *}
                                                 <button type="submit" form="sviat_ma_create_{$ma_l.id|escape}" class="btn btn_small btn-secondary sviat_ma__row_action">{$btr->sviat__merchant_api__create_source|escape}</button>

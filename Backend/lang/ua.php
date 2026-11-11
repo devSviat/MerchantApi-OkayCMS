@@ -38,6 +38,7 @@ $lang['sviat__merchant_api__col_feed_label'] = 'Мітка фіду';
 $lang['sviat__merchant_api__col_source'] = 'API-джерело';
 $lang['sviat__merchant_api__source_none'] = '— не вибрано —';
 $lang['sviat__merchant_api__source_mismatch'] = 'Мова чи мітка джерела не збігаються з цією мовою — збережіть знову з правильним джерелом.';
+$lang['sviat__merchant_api__source_not_cached'] = 'Цього джерела ще немає у списку, який модуль прочитав із Google. Натисніть «Перевірити зв’язок» на вкладці «Підключення».';
 $lang['sviat__merchant_api__create_source'] = 'Створити API-джерело';
 $lang['sviat__merchant_api__existing_sources'] = 'Джерела даних у Merchant Center';
 $lang['sviat__merchant_api__sources_fetched'] = 'Прочитано:';
