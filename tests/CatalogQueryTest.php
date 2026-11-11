@@ -16,12 +16,16 @@ use Okay\Modules\Sviat\MerchantApi\Services\CatalogItemBuilder;
 use Okay\Modules\Sviat\MerchantApi\Services\CatalogSettings;
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/WithoutDatabase.php';
+
 /**
  * Запит вибору товарів: що завжди відсіюється, «усі / вибрані» й винятки. Категорія товару — будь-яка з
  * його категорій, разом із нащадками вибраної.
  */
 class CatalogQueryTest extends TestCase
 {
+    use WithoutDatabase;
+
     /** Дерево: 1 → 2 → 3 → 4; 10 окремо. */
     private const array CHILDREN = [1 => [1, 2, 3, 4], 2 => [2, 3, 4], 3 => [3, 4], 4 => [4], 10 => [10]];
 

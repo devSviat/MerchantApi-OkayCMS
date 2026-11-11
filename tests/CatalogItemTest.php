@@ -14,12 +14,16 @@ use Okay\Modules\Sviat\MerchantApi\Services\CatalogItemBuilder;
 use Okay\Modules\Sviat\MerchantApi\Services\CatalogSettings;
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/WithoutDatabase.php';
+
 /**
  * Запис товару — той самий, що давав GoogleMerchantHelper::getItem: інакше після переходу Google перепровіряв би
  * весь каталог, а модулі-розширення працюють саме з цим форматом.
  */
 class CatalogItemTest extends TestCase
 {
+    use WithoutDatabase;
+
     public function testFieldsMatchGoogleMerchantShape(): void
     {
         $item = $this->builder()->getItem($this->product(), $this->categories(), false, new CatalogSettings());
