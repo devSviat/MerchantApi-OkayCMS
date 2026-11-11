@@ -77,8 +77,10 @@ class MerchantApiAdmin extends IndexAdmin
 
         // Лічильник вкладки «Товари» — лише читання, тож GET без CSRF; доступ перевіряє право модуля, як і до сторінки.
         if ($this->request->method('get') && $this->request->get('ma_stats') !== null) {
-            $this->design->assign('ma_catalog_stats', $catalogStats->summarize(CatalogSettings::fromSettings($this->settings), $this->lastSkipped($entityFactory)));
+            $stats = $catalogStats->summarize(CatalogSettings::fromSettings($this->settings), $this->lastSkipped($entityFactory));
+            $this->design->assign('ma_catalog_stats', $stats);
             $this->design->assign('ma_run_reasons', CatalogStats::RUN_REASONS);
+            $this->design->assign('ma_has_run_reason', array_intersect_key($stats['reasons'], array_flip(CatalogStats::RUN_REASONS)) !== []);
             $this->response->setContent(json_encode(['html' => $this->design->fetch('merchant_api_stats.tpl')]), RESPONSE_JSON);
 
             return;

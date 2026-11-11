@@ -3,7 +3,6 @@
 namespace Okay\Modules\Sviat\MerchantApi\Services;
 
 use Okay\Core\EntityFactory;
-use Okay\Core\Languages;
 use Okay\Core\QueryFactory;
 use Okay\Entities\CategoriesEntity;
 use Okay\Entities\ProductsEntity;
@@ -19,18 +18,16 @@ class CatalogStats
     // Їх видно лише зі зібраних записів (наявність ставлять розширення, ціну — акції, «знято з виробництва» —
     // Sviat/ProductDiscontinued), тож вони з останнього запуску.
     public const array RUN_REASONS = ['discontinued', 'out_of_stock', 'min_price'];
-    private const int SAMPLES = 20;
 
     public function __construct(
         private QueryFactory $queryFactory,
         private EntityFactory $entityFactory,
-        private Languages $languages,
     ) {
     }
 
     /**
      * @param array<string, int>|null $lastRunSkipped summary.skipped останнього запуску синхронізації
-     * @return array{total: int, sent: int, reasons: array<string, int>, samples: array<string, list<array{product_id: int, name: string}>>}
+     * @return array{total: int, sent: int, reasons: array<string, int>}
      */
     public function summarize(CatalogSettings $catalog, ?array $lastRunSkipped): array
     {
@@ -46,11 +43,11 @@ class CatalogStats
     }
 
     /**
-     * @param iterable<array{product_id: int, name: string, has_image: bool, price: float, brand_id: ?int, category_ids: list<int>}> $rows
+     * @param iterable<array{product_id: int, has_image: bool, price: float, brand_id: ?int, category_ids: list<int>}> $rows
      * @param list<int> $includeCategories уже з нащадками
      * @param list<int> $excludeCategories уже з нащадками
      * @param array<string, int>|null $lastRunSkipped
-     * @return array{total: int, sent: int, reasons: array<string, int>, samples: array<string, list<array{product_id: int, name: string}>>}
+     * @return array{total: int, sent: int, reasons: array<string, int>}
      */
     public static function partition(iterable $rows, CatalogSettings $catalog, array $includeCategories, array $excludeCategories, ?array $lastRunSkipped): array
     {
@@ -63,7 +60,6 @@ class CatalogStats
 
         $total = 0;
         $reasons = [];
-        $samples = [];
         foreach ($rows as $row) {
             $total++;
             $inAny = static fn(array $set): bool => array_intersect_key(array_flip($row['category_ids']), $set) !== [];
@@ -83,9 +79,6 @@ class CatalogStats
                 continue;
             }
             $reasons[$reason] = ($reasons[$reason] ?? 0) + 1;
-            if (count($samples[$reason] ?? []) < self::SAMPLES && !isset($samples[$reason][$row['product_id']])) {
-                $samples[$reason][$row['product_id']] = ['product_id' => $row['product_id'], 'name' => $row['name']];
-            }
         }
 
         foreach (self::RUN_REASONS as $reason) {
@@ -98,17 +91,15 @@ class CatalogStats
             'total' => $total,
             'sent' => max(0, $total - array_sum($reasons)),
             'reasons' => $reasons,
-            'samples' => array_map(array_values(...), $samples),
         ];
     }
 
-    /** @return list<array{product_id: int, name: string, has_image: bool, price: float, brand_id: ?int, category_ids: list<int>}> */
+    /** @return list<array{product_id: int, has_image: bool, price: float, brand_id: ?int, category_ids: list<int>}> */
     private function rows(): array
     {
         $rows = $this->queryFactory->newSelect()
             ->cols([
                 'p.id AS product_id',
-                'lp.name AS name',
                 "(p.main_image_id != '' AND p.main_image_id IS NOT NULL) AS has_image",
                 'v.price',
                 'p.brand_id',
@@ -116,7 +107,6 @@ class CatalogStats
             ])
             ->from(VariantsEntity::getTable() . ' AS v')
             ->join('INNER', ProductsEntity::getTable() . ' AS p', 'p.id = v.product_id')
-            ->leftJoin(ProductsEntity::getLangTable() . ' AS lp', 'lp.product_id = p.id AND lp.lang_id = ' . (int) $this->languages->getLangId())
             ->leftJoin('__products_categories AS pc', 'pc.product_id = p.id')
             ->where('p.visible')
             ->groupBy(['v.id'])
@@ -124,7 +114,6 @@ class CatalogStats
 
         return array_map(static fn(object $row) => [
             'product_id' => (int) $row->product_id,
-            'name' => (string) $row->name,
             'has_image' => (bool) $row->has_image,
             'price' => (float) $row->price,
             'brand_id' => $row->brand_id !== null ? (int) $row->brand_id : null,

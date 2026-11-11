@@ -386,24 +386,20 @@
     font-weight: 700;
 }
 
-.sviat_ma__why {
-    margin-top: 10px;
-}
-
-.sviat_ma__why summary,
 .sviat_ma__more summary {
     cursor: pointer;
     color: var(--ok-accent, #135c94);
 }
 
-.sviat_ma__why ul {
-    margin: 8px 0 0;
-    padding-left: 18px;
+.sviat_ma__reasons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
 }
 
-.sviat_ma__samples {
-    font-size: 12px;
-    color: var(--ok-ink-soft);
+.sviat_ma__reason {
+    white-space: nowrap;
+    color: var(--ok-ink);
 }
 
 .sviat_ma__radios {
