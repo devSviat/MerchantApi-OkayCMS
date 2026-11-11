@@ -590,7 +590,16 @@
 }
 
 .sviat_ma__count_item {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     white-space: nowrap;
-    border-bottom: 1px dotted var(--ok-line-strong);
     cursor: help;
+}
+
+.sviat_ma__count_item svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: var(--ok-ink-soft);
 }

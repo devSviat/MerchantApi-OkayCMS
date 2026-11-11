@@ -27,6 +27,36 @@ final readonly class SyncPlanner
         Operation::REFRESH, Operation::RETRY, 'backoff', Operation::GONE, 'unchanged',
     ];
 
+    /** Як причини показуються в журналі: усе, що піде пізніше, — однією групою «чекають». */
+    public const array DISPLAY_GROUPS = [
+        Operation::NEW => Operation::NEW,
+        Operation::CRITICAL => Operation::CRITICAL,
+        Operation::CHANGED => Operation::CHANGED,
+        Operation::REFRESH => Operation::REFRESH,
+        Operation::RETRY => Operation::RETRY,
+        'critical_cooldown' => 'waiting',
+        'cooldown' => 'waiting',
+        'backoff' => 'waiting',
+        Operation::GONE => Operation::GONE,
+        'unchanged' => 'unchanged',
+    ];
+
+    /**
+     * @param array<string, int> $counts лічильники плану (summary.counts запуску)
+     * @return array<string, int> група → кількість, у порядку DISPLAY_GROUPS
+     */
+    public static function displayCounts(array $counts): array
+    {
+        $shown = [];
+        foreach (self::DISPLAY_GROUPS as $reason => $group) {
+            if (($counts[$reason] ?? 0) > 0) {
+                $shown[$group] = ($shown[$group] ?? 0) + (int) $counts[$reason];
+            }
+        }
+
+        return $shown;
+    }
+
     private const array PRIORITY = [
         Operation::NEW => 0,
         Operation::CRITICAL => 0,
