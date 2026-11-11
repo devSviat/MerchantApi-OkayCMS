@@ -564,3 +564,21 @@
         overflow: visible;
     }
 }
+
+.sviat_ma__run_now {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-top: 16px;
+}
+
+.sviat_ma__run_now .sviat_ma__hint {
+    margin: 0;
+}
+
+/* Список «скільки змін за раз» — ширина за найдовшим варіантом, а не на весь рядок. */
+.sviat_ma__field--ops .bootstrap-select:not(.input-group-btn) {
+    width: 100%;
+    max-width: 340px;
+}

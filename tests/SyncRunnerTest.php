@@ -45,6 +45,7 @@ class SyncRunnerTest extends TestCase
     private DateTimeImmutable $now;
     private MemoryStateStore $store;
     private ?\Throwable $buildFails = null;
+    public ?DateTimeImmutable $lastStartedAt = null;
 
     protected function setUp(): void
     {
@@ -72,6 +73,23 @@ class SyncRunnerTest extends TestCase
 
         $this->assertSame([], $this->runs);
         $this->assertSame([], $this->google->requests);
+    }
+
+    /** Задача мови смикається щохвилини: працює лише за розкладом або після «Запустити зараз». */
+    public function testRunIfDueRunsOnScheduleOrRequest(): void
+    {
+        $this->lastStartedAt = $this->now->modify('-5 minutes');
+        $this->assertFalse($this->runner()->runIfDue(self::LANG));
+        $this->assertSame([], $this->started);
+
+        $this->settings()->requestRun($this->now->modify('-1 minute'));
+        $this->assertTrue($this->runner()->runIfDue(self::LANG));
+        $this->assertCount(1, $this->runs);
+
+        $this->settings()->setPaused(true);
+        $this->lastStartedAt = null;
+        $this->assertFalse($this->runner()->runIfDue(self::LANG));
+        $this->assertCount(1, $this->started);
     }
 
     public function testDryRunPlansButSendsNothing(): void
@@ -367,6 +385,11 @@ class SyncRunnerTest extends TestCase
             public function finish(?int $id, array $run): void
             {
                 $this->test->finishRun($id, $run);
+            }
+
+            public function lastStartedAt(int $langId): ?DateTimeImmutable
+            {
+                return $this->test->lastStartedAt;
             }
         };
         $factory = new class ($this->google) extends MerchantClientFactory {

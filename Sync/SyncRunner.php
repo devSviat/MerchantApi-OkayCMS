@@ -34,6 +34,11 @@ class SyncRunner
     // Стільки поспіль однакових відмов — це вже не товари, а налаштування (джерело, мітка, права).
     private const int REPEATED_STOP = 5;
 
+    // Розклад мови. Задача смикається щохвилини, а запуск стартує на кілька секунд після початку хвилини:
+    // допуск не дає розкладу з'їжджати на хвилину щоразу.
+    private const int INTERVAL_SECONDS = 900;
+    private const int START_TOLERANCE_SECONDS = 30;
+
     private ?int $runId = null;
 
     public function __construct(
@@ -46,6 +51,45 @@ class SyncRunner
         private MerchantClientFactory $clients,
         private Clock $clock,
     ) {
+    }
+
+    /**
+     * Точка входу задачі планувальника (щохвилини): запуск, якщо настав час за розкладом або після нього
+     * попросили «Запустити зараз». Дешева перевірка до будь-якої збірки.
+     */
+    public function runIfDue(int $langId): bool
+    {
+        if (!isset($this->settings->languages()[$langId]) || $this->settings->isPaused()
+            || !self::isDue($this->log->lastStartedAt($langId), $this->settings->runRequestedAt(), $this->clock->now())) {
+            return false;
+        }
+        $this->runLanguage($langId);
+
+        return true;
+    }
+
+    public static function isDue(?DateTimeImmutable $lastStartedAt, ?DateTimeImmutable $requestedAt, DateTimeImmutable $now): bool
+    {
+        if ($lastStartedAt === null || ($requestedAt !== null && $requestedAt > $lastStartedAt)) {
+            return true;
+        }
+
+        return $now->getTimestamp() - $lastStartedAt->getTimestamp() >= self::INTERVAL_SECONDS - self::START_TOLERANCE_SECONDS;
+    }
+
+    /** @param array<int, ?DateTimeImmutable> $lastStartedAt мова → початок її останнього запуску */
+    public static function requestPending(?DateTimeImmutable $requestedAt, array $lastStartedAt): bool
+    {
+        if ($requestedAt === null) {
+            return false;
+        }
+        foreach ($lastStartedAt as $startedAt) {
+            if ($startedAt === null || $startedAt <= $requestedAt) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function runLanguage(int $langId): void

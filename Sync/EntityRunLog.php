@@ -27,4 +27,13 @@ class EntityRunLog implements RunLog
         }
         $entity->update($id, $run);
     }
+
+    public function lastStartedAt(int $langId): ?\DateTimeImmutable
+    {
+        $last = $this->entityFactory->get(MerchantApiRunsEntity::class)->cols(['started_at'])->find(['lang_id' => $langId, 'limit' => 1]);
+        $startedAt = is_object($last[0] ?? null) ? (string) $last[0]->started_at : (string) ($last[0] ?? '');
+        $at = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $startedAt);
+
+        return $at === false ? null : $at;
+    }
 }

@@ -15,4 +15,7 @@ interface RunLog
 
     /** @param array<string, mixed> $run поля MerchantApiRunsEntity */
     public function finish(?int $id, array $run): void;
+
+    /** Коли почався останній запуск мови (будь-який: успішний, обірваний, сухий). */
+    public function lastStartedAt(int $langId): ?\DateTimeImmutable;
 }

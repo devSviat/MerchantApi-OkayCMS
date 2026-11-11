@@ -17,6 +17,11 @@ class ModuleSettings
 
     /** Скільки операцій API за один запуск задачі (15 хв) на мову; решта — наступним запуском. */
     public const int DEFAULT_OPS_PER_RUN = 500;
+    /**
+     * Ліміт операцій на запуск мови — зі списку. Відповідь Google на вставку — 100–600 мс, тож 2000 операцій
+     * це до ~20 хвилин: більше не вміщається між запусками раз на 15 хвилин і впирається в таймаут задачі (30 хв).
+     */
+    public const array OPS_CHOICES = [250, 500, 1000, 2000];
 
     private const string SITE_URL = '#\Ahttps?://[A-Za-z0-9.-]+(:\d{1,5})?(/[A-Za-z0-9._~%/-]*)?\z#';
 
@@ -158,6 +163,19 @@ class ModuleSettings
     public function setOpsPerRun(int $ops): void
     {
         $this->settings->set(self::PREFIX . 'ops_per_run', (string) max(1, min(5000, $ops)));
+    }
+
+    /** «Запустити зараз»: досить часу запиту — його виконує будь-який запуск мови, що почався пізніше. */
+    public function requestRun(\DateTimeImmutable $at): void
+    {
+        $this->settings->set(self::PREFIX . 'run_requested_at', $at->format(DATE_ATOM));
+    }
+
+    public function runRequestedAt(): ?\DateTimeImmutable
+    {
+        $at = \DateTimeImmutable::createFromFormat(DATE_ATOM, $this->string('run_requested_at'));
+
+        return $at === false ? null : $at;
     }
 
     /**
