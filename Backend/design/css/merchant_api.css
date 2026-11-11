@@ -339,3 +339,203 @@
     background: var(--ok-warning-soft);
     color: var(--ok-warning);
 }
+
+.sviat_ma__label_field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sviat_ma__tip {
+    flex: none;
+    color: var(--ok-ink-soft);
+}
+
+.sviat_ma__alert {
+    margin: 0 0 12px;
+}
+
+.sviat_ma__count {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: var(--ok-radius, 8px);
+    background: var(--ok-success-soft);
+    color: var(--ok-ink);
+}
+
+.sviat_ma__count.is-empty {
+    background: var(--ok-warning-soft);
+}
+
+.sviat_ma__count_num {
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.sviat_ma__why {
+    margin-top: 10px;
+}
+
+.sviat_ma__why summary,
+.sviat_ma__more summary {
+    cursor: pointer;
+    color: var(--ok-accent, #135c94);
+}
+
+.sviat_ma__why ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+}
+
+.sviat_ma__samples {
+    font-size: 12px;
+    color: var(--ok-ink-soft);
+}
+
+.sviat_ma__radios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+}
+
+.sviat_ma__radios .okay_type_radio_wrap {
+    min-height: 0;
+    margin: 0;
+}
+
+.sviat_ma__pickers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px 20px;
+}
+
+/* Системний список товарів малює власну картку з заголовком, пошуком під списком і рядками по 80px. Тут він —
+   окремий ряд під категоріями й брендами: пошук угорі шириною з колонку, вибрані — компактною сіткою під ним.
+   Порядок товарів нічого не значить, тож ручку перетягування сховано. */
+.sviat_ma__pickers:has(.sviat_ma__product_picker) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sviat_ma__product_picker {
+    grid-column: 1 / -1;
+}
+
+.sviat_ma__product_picker .heading_box,
+.sviat_ma__product_picker .toggle_body_wrap > .heading_label,
+.sviat_ma__product_picker .okay_list_drag {
+    display: none;
+}
+
+.sviat_ma__product_picker .toggle_body_wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sviat_ma__product_picker .autocomplete_arrow {
+    order: -1;
+    width: 100%;
+    max-width: calc(50% - 10px);
+}
+
+.sviat_ma__product_picker .ok_related_list {
+    margin: 0;
+}
+
+.sviat_ma__product_picker .okay_list_body {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 6px 12px;
+    max-height: 312px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.sviat_ma__product_picker .okay_list .okay_list_body_item,
+.sviat_ma__product_picker .okay_list .okay_list_body_item:last-child {
+    min-height: 0;
+    border: 1px solid var(--ok-line);
+    border-radius: var(--ok-radius-control);
+    background: var(--ok-surface);
+}
+
+.sviat_ma__product_picker .okay_list .okay_list_row {
+    min-height: 44px;
+}
+
+.sviat_ma__product_picker .okay_list .okay_list_boding {
+    padding: 4px 6px;
+}
+
+.sviat_ma__product_picker .okay_list .okay_list_related_photo {
+    width: 44px;
+    flex: none;
+}
+
+.sviat_ma__product_picker .product_icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.sviat_ma__product_picker .okay_list .okay_list_related_name {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.sviat_ma__product_picker .okay_list .okay_list_related_name .link {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.sviat_ma__product_picker .okay_list .okay_list_close {
+    width: 40px;
+    flex: none;
+}
+
+@media (max-width: 767px) {
+    .sviat_ma__pickers:has(.sviat_ma__product_picker) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sviat_ma__product_picker .autocomplete_arrow {
+        max-width: none;
+    }
+}
+
+.sviat_ma__catalog:has(#sviat_ma_catalog_mode_all:checked) .sviat_ma__selected_block {
+    display: none;
+}
+
+.sviat_ma__more {
+    margin-top: 14px;
+}
+
+/* Підказка «Видалити» в ядрі — псевдоелемент під кнопкою; у списку з прокруткою вона сама дає смугу прокрутки. */
+.sviat_ma__product_picker .btn_close::before,
+.sviat_ma__product_picker .btn_close::after {
+    display: none;
+}
+
+.sviat_ma__flash {
+    animation: sviat_ma__flash 1.2s ease-out;
+}
+
+@keyframes sviat_ma__flash {
+    from {
+        background: var(--ok-warning-soft);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sviat_ma__flash {
+        animation: none;
+    }
+}

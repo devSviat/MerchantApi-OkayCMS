@@ -79,7 +79,7 @@ class StatusPollerTest extends TestCase
         $this->assertSame(['UA'], $settings->countries());
         $this->assertTrue($settings->isPaused(), 'unset pause means paused');
         $this->assertTrue($settings->isDryRun(), 'unset dry run means dry run');
-        $this->assertNull(LanguageTarget::create(3, 'uk', 'UA', 1, 'accounts/1/dataSources/2?x=1'));
+        $this->assertNull(LanguageTarget::create(3, 'uk', 'UA', 'accounts/1/dataSources/2?x=1'));
     }
 
     /** Ядро десеріалізує кожне налаштування: рядок із форми може повернутись об'єктом. */

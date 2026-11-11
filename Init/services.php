@@ -13,6 +13,9 @@ use Okay\Core\QueryFactory;
 use Okay\Core\Router;
 use Okay\Core\Settings;
 use Okay\Modules\Sviat\MerchantApi\Google\MerchantClientFactory;
+use Okay\Helpers\ProductsHelper;
+use Okay\Modules\Sviat\MerchantApi\Services\CatalogProducts;
+use Okay\Modules\Sviat\MerchantApi\Services\CatalogStats;
 use Okay\Modules\Sviat\MerchantApi\Services\CredentialStore;
 use Okay\Modules\Sviat\MerchantApi\Services\FeedItemBuilder;
 use Okay\Modules\Sviat\MerchantApi\Services\ModuleSettings;
@@ -91,6 +94,21 @@ return [
             new SR(MerchantClientFactory::class),
             new SR(EntityFactory::class),
             new SR(Clock::class),
+        ],
+    ],
+    CatalogStats::class => [
+        'class' => CatalogStats::class,
+        'arguments' => [
+            new SR(QueryFactory::class),
+            new SR(EntityFactory::class),
+            new SR(Languages::class),
+        ],
+    ],
+    CatalogProducts::class => [
+        'class' => CatalogProducts::class,
+        'arguments' => [
+            new SR(EntityFactory::class),
+            new SR(ProductsHelper::class),
         ],
     ],
 ];

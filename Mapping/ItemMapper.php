@@ -66,9 +66,15 @@ final readonly class ItemMapper
     {
         $flat = [];
         $problems = [];
+        $details = [];
         foreach ($feedItem as $key => $entry) {
             $tag = is_array($entry) && isset($entry['tag']) ? (string) $entry['tag'] : (string) $key;
             $value = is_array($entry) ? ($entry['data'] ?? null) : null;
+            if ($tag === 'g:product_detail' && is_array($value)) {
+                $detail = self::productDetail($value);
+                $detail === null ? $problems[] = 'bad_value:g:product_detail' : $details[] = $detail;
+                continue;
+            }
             if (!is_scalar($value)) {
                 $problems[] = "unsupported:{$tag}";
                 continue;
@@ -77,14 +83,38 @@ final readonly class ItemMapper
             $flat[$tag][] = html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
 
-        return $this->map($flat, $contentLanguage, $feedLabel, $problems);
+        return $this->map($flat, $contentLanguage, $feedLabel, $problems, $details);
+    }
+
+    /**
+     * Плоский формат (`g:attribute_name` => текст) і вкладений, як у пресеті Feeds (`g:attribute_name` => ['data' => текст]).
+     *
+     * @param array<mixed> $value
+     * @return array{sectionName?: string, attributeName: string, attributeValue: string}|null
+     */
+    private static function productDetail(array $value): ?array
+    {
+        $text = static function (mixed $field): string {
+            $field = is_array($field) ? ($field['data'] ?? null) : $field;
+
+            return is_scalar($field) ? trim(html_entity_decode((string) $field, ENT_QUOTES | ENT_HTML5, 'UTF-8')) : '';
+        };
+        $section = $text($value['g:section_name'] ?? null);
+        $name = $text($value['g:attribute_name'] ?? null);
+        $attributeValue = $text($value['g:attribute_value'] ?? null);
+        if ($name === '' || $attributeValue === '') {
+            return null;
+        }
+
+        return ($section !== '' ? ['sectionName' => $section] : []) + ['attributeName' => $name, 'attributeValue' => $attributeValue];
     }
 
     /**
      * @param array<string, list<string>> $flat тег → значення вже звичайним текстом (так дає і розбір XML)
      * @param list<string> $problems
+     * @param list<array<string, string>> $details характеристики (productDetails), уже розібрані
      */
-    public function map(array $flat, string $contentLanguage, string $feedLabel, array $problems = []): MappedItem
+    public function map(array $flat, string $contentLanguage, string $feedLabel, array $problems = [], array $details = []): MappedItem
     {
         $offerId = $flat['g:id'][0] ?? '';
         unset($flat['g:id']);
@@ -144,6 +174,10 @@ final readonly class ItemMapper
                 default:
                     $problems[] = "unknown_tag:{$tag}";
             }
+        }
+
+        if ($details !== []) {
+            $attributes['productDetails'] = $details;
         }
 
         if ($this->priceLabel !== null) {

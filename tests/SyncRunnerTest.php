@@ -52,7 +52,7 @@ class SyncRunnerTest extends TestCase
         $this->now = new DateTimeImmutable('2026-10-26T12:00:00+02:00');
         $this->store = new MemoryStateStore();
         $settings = $this->settings();
-        $settings->setLanguages([LanguageTarget::create(self::LANG, 'uk', 'UA', 1, self::SOURCE)]);
+        $settings->setLanguages([LanguageTarget::create(self::LANG, 'uk', 'UA', self::SOURCE)]);
         $settings->setSiteUrl('https://shop.example');
         $settings->setAccountId('123');
         $settings->setPaused(false);
@@ -143,7 +143,7 @@ class SyncRunnerTest extends TestCase
     public function testDataSourceChangeResendsEverythingIntoNewSource(): void
     {
         $this->runner()->runLanguage(self::LANG);
-        $this->settings()->setLanguages([LanguageTarget::create(self::LANG, 'uk', 'UA', 1, self::OTHER_SOURCE)]);
+        $this->settings()->setLanguages([LanguageTarget::create(self::LANG, 'uk', 'UA', self::OTHER_SOURCE)]);
 
         $this->runner()->runLanguage(self::LANG);
 
@@ -156,7 +156,7 @@ class SyncRunnerTest extends TestCase
     public function testLabelChangeWithProductsInGoogleStops(): void
     {
         $this->runner()->runLanguage(self::LANG);
-        $this->settings()->setLanguages([LanguageTarget::create(self::LANG, 'uk', 'NEW', 1, self::SOURCE)]);
+        $this->settings()->setLanguages([LanguageTarget::create(self::LANG, 'uk', 'NEW', self::SOURCE)]);
         $this->google->requests = [];
 
         $this->runner()->runLanguage(self::LANG);
@@ -169,7 +169,7 @@ class SyncRunnerTest extends TestCase
     public function testRemovedLanguageDeletesItsProductsThenItself(): void
     {
         $this->runner()->runLanguage(self::LANG);
-        $this->settings()->setLanguages([LanguageTarget::create(self::LANG, 'uk', 'UA', 1, self::SOURCE)->withRemoving(true)]);
+        $this->settings()->setLanguages([LanguageTarget::create(self::LANG, 'uk', 'UA', self::SOURCE)->withRemoving(true)]);
 
         $this->runner()->runLanguage(self::LANG);
 
@@ -344,9 +344,14 @@ class SyncRunnerTest extends TestCase
             {
             }
 
-            public function build(int $langId, int $feedId, string $siteUrl): array
+            public function build(int $langId, string $siteUrl): array
             {
                 return $this->test->feed();
+            }
+
+            public function lastSkipped(): array
+            {
+                return ['out_of_stock' => 0, 'min_price' => 0];
             }
         };
         $log = new class ($this) implements RunLog {
