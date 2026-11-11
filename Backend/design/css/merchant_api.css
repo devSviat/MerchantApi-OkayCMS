@@ -357,12 +357,24 @@
 
 .sviat_ma__count {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 8px;
+    gap: 4px 8px;
     padding: 12px 16px;
     border-radius: var(--ok-radius, 8px);
     background: var(--ok-success-soft);
     color: var(--ok-ink);
+}
+
+.sviat_ma__count > .sviat_ma__hint {
+    flex-basis: 100%;
+    margin: 0;
+}
+
+.sviat_ma__count.is-loading,
+.sviat_ma__count.is-failed {
+    background: var(--ok-surface);
+    border: 1px solid var(--ok-line);
 }
 
 .sviat_ma__count.is-empty {
@@ -538,4 +550,8 @@
     .sviat_ma__flash {
         animation: none;
     }
+}
+
+.sviat_ma__count.is-failed .sviat_ma__hint {
+    color: var(--ok-danger);
 }

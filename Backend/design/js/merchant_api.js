@@ -32,8 +32,35 @@
         }).observe(list, {childList: true});
     }
 
+    // Прихована вкладка (display: none) не перетинає екран, тож запит піде лише тоді, коли «Товари» відкрили.
+    function loadStats(box) {
+        var observer = new IntersectionObserver(function (entries) {
+            if (!entries.some(function (entry) { return entry.isIntersecting; })) {
+                return;
+            }
+            observer.disconnect();
+            fetch(box.dataset.url, {credentials: 'same-origin', headers: {'Accept': 'application/json'}})
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error(String(response.status));
+                    }
+                    return response.json();
+                })
+                .then(function (data) {
+                    box.innerHTML = data.html;
+                })
+                .catch(function () {
+                    var count = box.querySelector('.sviat_ma__count');
+                    count.classList.add('is-failed');
+                    count.querySelector('.sviat_ma__hint').textContent = box.dataset.error;
+                });
+        });
+        observer.observe(box);
+    }
+
     function init() {
         document.querySelectorAll('.sviat_ma__product_picker .okay_list_body').forEach(watch);
+        document.querySelectorAll('.fn_ma_stats').forEach(loadStats);
     }
 
     if (document.readyState === 'loading') {

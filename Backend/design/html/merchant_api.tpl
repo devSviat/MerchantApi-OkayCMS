@@ -314,30 +314,12 @@
         {* Товари: один набір на всі мови — лічильник, що надсилати, винятки, дані товару. *}
         <div id="ma_products" class="tab">
             {$ma_c = $ma_catalog}
-            {$ma_st = $ma_catalog_stats}
             <section class="sviat_ma__section">
                 {ma_alert section='catalog'}
-                <div class="sviat_ma__count{if $ma_st.sent == 0} is-empty{/if}">
-                    <span class="sviat_ma__count_num">{$ma_st.sent|escape}</span>
-                    <span>{$btr->sviat__merchant_api__catalog_count|sprintf:$ma_st.total|escape}</span>
+                {* Лічильник рахує весь каталог, тож вантажиться окремим запитом лише тоді, коли відкрили цю вкладку. *}
+                <div class="fn_ma_stats" data-url="index.php?controller=Sviat.MerchantApi.MerchantApiAdmin&amp;ma_stats=1" data-error="{$btr->sviat__merchant_api__catalog_count_failed|escape}" aria-live="polite">
+                    <div class="sviat_ma__count is-loading"><span class="sviat_ma__hint">{$btr->sviat__merchant_api__catalog_counting|escape}</span></div>
                 </div>
-                {if $ma_st.reasons}
-                    <details class="sviat_ma__why">
-                        <summary>{$btr->sviat__merchant_api__catalog_why|escape}</summary>
-                        <ul>
-                            {foreach $ma_st.reasons as $ma_reason => $ma_n}
-                                <li>
-                                    <b>{$btr->getTranslation("sviat__merchant_api__reason_`$ma_reason`")|escape}</b> — {$ma_n|escape}{if in_array($ma_reason, $ma_run_reasons)} <span class="sviat_ma__hint">{$btr->sviat__merchant_api__catalog_last_run|escape}</span>{/if}
-                                    {if $ma_st.samples[$ma_reason]}
-                                        <div class="sviat_ma__samples">
-                                            {foreach $ma_st.samples[$ma_reason] as $ma_sample}<a href="index.php?controller=ProductAdmin&amp;id={$ma_sample.product_id|escape}" target="_blank" rel="noopener">{$ma_sample.name|escape}</a>{if !$ma_sample@last}, {/if}{/foreach}{if $ma_n > count($ma_st.samples[$ma_reason])} …{/if}
-                                        </div>
-                                    {/if}
-                                </li>
-                            {/foreach}
-                        </ul>
-                    </details>
-                {/if}
             </section>
 
             {function name=ma_category_options categories=[] selected=[] level=0}

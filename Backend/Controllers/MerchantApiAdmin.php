@@ -75,6 +75,15 @@ class MerchantApiAdmin extends IndexAdmin
         $this->moduleSettings = $moduleSettings;
         $this->clients = $clients;
 
+        // Лічильник вкладки «Товари» — лише читання, тож GET без CSRF; доступ перевіряє право модуля, як і до сторінки.
+        if ($this->request->method('get') && $this->request->get('ma_stats') !== null) {
+            $this->design->assign('ma_catalog_stats', $catalogStats->summarize(CatalogSettings::fromSettings($this->settings), $this->lastSkipped($entityFactory)));
+            $this->design->assign('ma_run_reasons', CatalogStats::RUN_REASONS);
+            $this->response->setContent(json_encode(['html' => $this->design->fetch('merchant_api_stats.tpl')]), RESPONSE_JSON);
+
+            return;
+        }
+
         // Дія — лише з POST: на невалідному CSRF-токені ядро очищає $_POST, а $_FILES лишає.
         if ($this->request->method('post')) {
             $this->section = self::sectionOf((string) $this->request->post('action'));
@@ -97,7 +106,7 @@ class MerchantApiAdmin extends IndexAdmin
         }
 
         $this->assignView($requirements, $entityFactory);
-        $this->assignCatalog($entityFactory, $catalogStats, $catalogProducts);
+        $this->assignCatalog($entityFactory, $catalogProducts);
         $this->response->setContent($this->design->fetch('merchant_api.tpl'));
     }
 
@@ -469,27 +478,36 @@ class MerchantApiAdmin extends IndexAdmin
         $this->design->assign('ma_issues', $issues);
     }
 
-    private function assignCatalog(EntityFactory $entityFactory, CatalogStats $catalogStats, CatalogProducts $catalogProducts): void
+    /** Лише видимі властивості: збирач бере характеристики тільки з них (XmlFeedHelper::joinFeatures, f.visible). */
+    public static function detailFeatures(EntityFactory $entityFactory): array
     {
-        $catalog = CatalogSettings::fromSettings($this->settings);
-        $lastSkipped = null;
+        return $entityFactory->get(FeaturesEntity::class)->noLimit()->find(['visible' => 1]);
+    }
+
+    /** @return array<string, int>|null summary.skipped останнього завершеного запуску */
+    private function lastSkipped(EntityFactory $entityFactory): ?array
+    {
         foreach ($entityFactory->get(MerchantApiRunsEntity::class)->find(['limit' => self::RUNS_SHOWN]) as $run) {
             $summary = json_decode((string) $run->summary, true);
             if ($run->status !== 'running' && is_array($summary['skipped'] ?? null)) {
-                $lastSkipped = $summary['skipped'];
-                break;
+                return $summary['skipped'];
             }
         }
+
+        return null;
+    }
+
+    private function assignCatalog(EntityFactory $entityFactory, CatalogProducts $catalogProducts): void
+    {
+        $catalog = CatalogSettings::fromSettings($this->settings);
 
         $products = $catalogProducts->byId(array_merge($catalog->includeProducts, $catalog->excludeProducts));
         $pick = static fn(array $ids) => array_values(array_filter(array_map(static fn($id) => $products[$id] ?? null, $ids)));
 
         $this->design->assign('ma_catalog', $catalog);
-        $this->design->assign('ma_catalog_stats', $catalogStats->summarize($catalog, $lastSkipped));
-        $this->design->assign('ma_run_reasons', CatalogStats::RUN_REASONS);
         $this->design->assign('ma_catalog_categories', $entityFactory->get(CategoriesEntity::class)->getCategoriesTree());
         $this->design->assign('ma_catalog_brands', $entityFactory->get(BrandsEntity::class)->noLimit()->find());
-        $this->design->assign('ma_catalog_features', $entityFactory->get(FeaturesEntity::class)->noLimit()->find());
+        $this->design->assign('ma_catalog_features', self::detailFeatures($entityFactory));
         $this->design->assign('ma_catalog_include_products', $pick($catalog->includeProducts));
         $this->design->assign('ma_catalog_exclude_products', $pick($catalog->excludeProducts));
     }
