@@ -6,22 +6,28 @@
     </div>
 </div>
 
-{if $message_success}
-    <div class="alert alert--center alert--icon alert--success">
-        <div class="alert__content">
-            <div class="alert__title">{$btr->getTranslation("sviat__merchant_api__msg_`$message_success`")|escape}</div>
-        </div>
-    </div>
-{/if}
-{if $message_error}
-    <div class="alert alert--center alert--icon alert--error">
-        <div class="alert__content">
-            <div class="alert__title">{$btr->getTranslation("sviat__merchant_api__err_`$message_error`")|escape}</div>
-            {if $ma_google_error}<p class="sviat_ma__code">{$ma_google_error|escape}</p>{/if}
-            {if $ma_error_langs}<p>{$ma_error_langs|join:', '|escape}</p>{/if}
-        </div>
-    </div>
-{/if}
+{* Результат дії — у секції, де її натиснули (ma_message_section); без секції — угорі сторінки. *}
+{function name=ma_alert section=''}
+    {if ($ma_message_section|default:'') == $section}
+        {if $message_success}
+            <div class="alert alert--icon alert--success sviat_ma__alert" role="status">
+                <div class="alert__content">
+                    <div class="alert__title">{$btr->getTranslation("sviat__merchant_api__msg_`$message_success`")|escape}</div>
+                </div>
+            </div>
+        {/if}
+        {if $message_error}
+            <div class="alert alert--icon alert--error sviat_ma__alert" role="alert">
+                <div class="alert__content">
+                    <div class="alert__title">{$btr->getTranslation("sviat__merchant_api__err_`$message_error`")|escape}</div>
+                    {if $ma_google_error}<p class="sviat_ma__code">{$ma_google_error|escape}</p>{/if}
+                    {if $ma_error_langs}<p>{$ma_error_langs|join:', '|escape}</p>{/if}
+                </div>
+            </div>
+        {/if}
+    {/if}
+{/function}
+{ma_alert section=''}
 
 {if $ma_missing}
     <div class="alert alert--icon alert--error">
@@ -59,6 +65,7 @@
         <div class="tab_navigation">
             <a href="#ma_connection" class="heading_box tab_navigation_link">{$btr->sviat__merchant_api__tab_connection|escape}</a>
             <a href="#ma_languages" class="heading_box tab_navigation_link">{$btr->sviat__merchant_api__tab_languages|escape}</a>
+            <a href="#ma_products" class="heading_box tab_navigation_link">{$btr->sviat__merchant_api__tab_products|escape}</a>
             <a href="#ma_sync" class="heading_box tab_navigation_link">{$btr->sviat__merchant_api__tab_sync|escape}</a>
             <a href="#ma_issues" class="heading_box tab_navigation_link">{$btr->sviat__merchant_api__tab_issues|escape}</a>
         </div>
@@ -69,6 +76,7 @@
         <div id="ma_connection" class="tab">
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__key|escape}</h3>
+                {ma_alert section='key'}
                 {if $ma_key}
                     <dl class="sviat_ma__summary">
                         <dt>{$btr->sviat__merchant_api__key_email|escape}</dt><dd>{$ma_key.client_email|escape}</dd>
@@ -107,6 +115,7 @@
 
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__account|escape}</h3>
+                {ma_alert section='account'}
                 <form method="post" class="sviat_ma__form">
                     <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
                     <input type="hidden" name="action" value="save_connection">
@@ -133,6 +142,7 @@
 
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__access|escape}</h3>
+                {ma_alert section='access'}
                 <p class="sviat_ma__hint">{$btr->sviat__merchant_api__register_hint|escape}</p>
                 <form method="post" class="sviat_ma__form">
                     <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
@@ -158,6 +168,7 @@
         <div id="ma_languages" class="tab">
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__languages|escape}</h3>
+                {ma_alert section='languages'}
                 <p class="sviat_ma__hint">{$btr->sviat__merchant_api__languages_hint|escape}</p>
                 <form method="post" id="sviat_ma_languages_form">
                     <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
@@ -168,7 +179,6 @@
                                 <tr>
                                     <th>{$btr->sviat__merchant_api__col_language|escape}</th>
                                     <th>{$btr->sviat__merchant_api__col_send|escape}</th>
-                                    <th>{$btr->sviat__merchant_api__col_feed|escape}</th>
                                     <th>{$btr->sviat__merchant_api__col_feed_label|escape}</th>
                                     <th>{$btr->sviat__merchant_api__col_source|escape}</th>
                                 </tr>
@@ -189,16 +199,9 @@
                                             </label>
                                         </td>
                                         <td>
-                                            <select class="form-control" name="langs[{$ma_l.id|escape}][feed_id]" aria-label="{$ma_l.name|escape}: {$btr->sviat__merchant_api__col_feed|escape}">
-                                                {foreach $ma_feeds as $ma_f}
-                                                    <option value="{$ma_f->id|escape}"{if $ma_l.target && $ma_l.target.feed_id == $ma_f->id} selected{/if}>{$ma_f->name|escape}</option>
-                                                {/foreach}
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <input class="form-control" name="langs[{$ma_l.id|escape}][feed_label]" value="{if $ma_l.target}{$ma_l.target.feed_label|escape}{elseif $ma_l.file_source}{$ma_l.file_source.feed_label|escape}{/if}" maxlength="20"
+                                            <div class="sviat_ma__label_field"><input class="form-control" name="langs[{$ma_l.id|escape}][feed_label]" value="{if $ma_l.target}{$ma_l.target.feed_label|escape}{elseif $ma_l.file_source}{$ma_l.file_source.feed_label|escape}{/if}" maxlength="20"
                                                    aria-label="{$ma_l.name|escape}: {$btr->sviat__merchant_api__col_feed_label|escape}">
-                                            {if $ma_l.file_source}<div class="sviat_ma__hint">{$btr->sviat__merchant_api__file_source_label|sprintf:$ma_l.file_source.display_name:$ma_l.file_source.feed_label|escape}</div>{/if}
+                                            {if $ma_l.file_source}{$ma_hint = $btr->sviat__merchant_api__file_source_label|sprintf:$ma_l.file_source.display_name:$ma_l.file_source.feed_label}<i class="fn_tooltips sviat_ma__tip hint-bottom-right-t-white-s-med-mobile hint-anim" data-hint="{$ma_hint|escape}" tabindex="0" role="img" aria-label="{$ma_hint|escape}">{include file='svg_icon.tpl' svgId='icon_tooltips'}</i>{/if}</div>
                                             {if $ma_l.label_differs}<div class="sviat_ma__hint text_warning">{$btr->sviat__merchant_api__label_differs|escape}</div>{/if}
                                         </td>
                                         <td>
@@ -241,6 +244,7 @@
 
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__existing_sources|escape}</h3>
+                {ma_alert section='sources'}
                 {if $ma_sources}
                     <p class="sviat_ma__hint">{$btr->sviat__merchant_api__existing_sources_hint|escape} {$btr->sviat__merchant_api__sources_fetched|escape} {$ma_sources_fetched_at|date_format:'%d.%m.%Y %H:%M'|escape}</p>
                     <div class="sviat_ma__scroll">
@@ -273,6 +277,7 @@
 
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__price_label|escape}</h3>
+                {ma_alert section='price_label'}
                 <p class="sviat_ma__hint">{$btr->sviat__merchant_api__price_label_hint|escape}</p>
                 {if $ma_price_label_warning}<p class="sviat_ma__hint text_warning">{$btr->sviat__merchant_api__price_label_warning|escape}</p>{/if}
                 <form method="post" class="sviat_ma__form">
@@ -288,7 +293,7 @@
                     </div>
                     <div class="sviat_ma__field">
                         <label class="heading_label" for="sviat_ma_pl_index">{$btr->sviat__merchant_api__price_label_index|escape}</label>
-                        <select class="form-control sviat_ma__narrow" id="sviat_ma_pl_index" name="price_label_index">
+                        <select class="selectpicker form-control sviat_ma__narrow" id="sviat_ma_pl_index" name="price_label_index">
                             {foreach [0,1,2,3,4] as $ma_i}
                                 <option value="{$ma_i}"{if $ma_price_label.index === "`$ma_i`"} selected{/if}>custom_label_{$ma_i}</option>
                             {/foreach}
@@ -306,10 +311,147 @@
             </section>
         </div>
 
+        {* Товари: один набір на всі мови — лічильник, що надсилати, винятки, дані товару. *}
+        <div id="ma_products" class="tab">
+            {$ma_c = $ma_catalog}
+            {$ma_st = $ma_catalog_stats}
+            <section class="sviat_ma__section">
+                {ma_alert section='catalog'}
+                <div class="sviat_ma__count{if $ma_st.sent == 0} is-empty{/if}">
+                    <span class="sviat_ma__count_num">{$ma_st.sent|escape}</span>
+                    <span>{$btr->sviat__merchant_api__catalog_count|sprintf:$ma_st.total|escape}</span>
+                </div>
+                {if $ma_st.reasons}
+                    <details class="sviat_ma__why">
+                        <summary>{$btr->sviat__merchant_api__catalog_why|escape}</summary>
+                        <ul>
+                            {foreach $ma_st.reasons as $ma_reason => $ma_n}
+                                <li>
+                                    <b>{$btr->getTranslation("sviat__merchant_api__reason_`$ma_reason`")|escape}</b> — {$ma_n|escape}{if in_array($ma_reason, $ma_run_reasons)} <span class="sviat_ma__hint">{$btr->sviat__merchant_api__catalog_last_run|escape}</span>{/if}
+                                    {if $ma_st.samples[$ma_reason]}
+                                        <div class="sviat_ma__samples">
+                                            {foreach $ma_st.samples[$ma_reason] as $ma_sample}<a href="index.php?controller=ProductAdmin&amp;id={$ma_sample.product_id|escape}" target="_blank" rel="noopener">{$ma_sample.name|escape}</a>{if !$ma_sample@last}, {/if}{/foreach}{if $ma_n > count($ma_st.samples[$ma_reason])} …{/if}
+                                        </div>
+                                    {/if}
+                                </li>
+                            {/foreach}
+                        </ul>
+                    </details>
+                {/if}
+            </section>
+
+            {function name=ma_category_options categories=[] selected=[] level=0}
+                {foreach $categories as $ma_cat}
+                    <option value="{$ma_cat->id|escape}"{if in_array($ma_cat->id, $selected)} selected{/if}>{section name=ma_pad loop=$level}&nbsp;&nbsp;&nbsp;&nbsp;{/section}{$ma_cat->name|escape}</option>
+                    {if $ma_cat->subcategories}{ma_category_options categories=$ma_cat->subcategories selected=$selected level=$level+1}{/if}
+                {/foreach}
+            {/function}
+
+            <form method="post" class="sviat_ma__catalog">
+                <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
+                <input type="hidden" name="action" value="save_catalog">
+
+                <section class="sviat_ma__section">
+                    <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__catalog_what|escape}</h3>
+                    <div class="sviat_ma__radios">
+                        {foreach ['all', 'selected'] as $ma_cm}
+                            <div class="okay_type_radio_wrap">
+                                <input id="sviat_ma_catalog_mode_{$ma_cm}" class="hidden_check" name="mode" type="radio" value="{$ma_cm}"{if $ma_c->mode == $ma_cm} checked{/if}>
+                                <label for="sviat_ma_catalog_mode_{$ma_cm}" class="okay_type_radio">{$btr->getTranslation("sviat__merchant_api__catalog_mode_`$ma_cm`")|escape}</label>
+                            </div>
+                        {/foreach}
+                    </div>
+                    <p class="sviat_ma__hint">{$btr->sviat__merchant_api__catalog_mode_hint|escape}</p>
+                    <div class="sviat_ma__selected_block">
+                        {if $ma_c->mode == 'selected' && !$ma_c->includeCategories && !$ma_c->includeBrands && !$ma_c->includeProducts}
+                            <p class="text_warning">{$btr->sviat__merchant_api__catalog_selected_empty|escape}</p>
+                        {/if}
+                        <div class="sviat_ma__pickers">
+                            <div class="sviat_ma__field">
+                                <label class="heading_label" for="sviat_ma_inc_cat">{$btr->sviat__merchant_api__catalog_categories|escape}</label>
+                                <select id="sviat_ma_inc_cat" name="include_categories[]" class="selectpicker form-control" multiple data-live-search="true" data-selected-text-format="count" data-size="10" title="{$btr->sviat__merchant_api__catalog_none|escape}">
+                                    {ma_category_options categories=$ma_catalog_categories selected=$ma_c->includeCategories}
+                                </select>
+                            </div>
+                            <div class="sviat_ma__field">
+                                <label class="heading_label" for="sviat_ma_inc_brand">{$btr->sviat__merchant_api__catalog_brands|escape}</label>
+                                <select id="sviat_ma_inc_brand" name="include_brands[]" class="selectpicker form-control" multiple data-live-search="true" data-selected-text-format="count" data-size="10" title="{$btr->sviat__merchant_api__catalog_none|escape}">
+                                    {foreach $ma_catalog_brands as $ma_brand}<option value="{$ma_brand->id|escape}"{if in_array($ma_brand->id, $ma_c->includeBrands)} selected{/if}>{$ma_brand->name|escape}</option>{/foreach}
+                                </select>
+                            </div>
+                            <div class="sviat_ma__field sviat_ma__product_picker">
+                                <label class="heading_label" for="include_products_compact_product_list">{$btr->sviat__merchant_api__catalog_products|escape}</label>
+                                {backend_compact_product_list name="include_products" products=$ma_catalog_include_products placeholder=$btr->sviat__merchant_api__catalog_find_product}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="sviat_ma__section">
+                    <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__catalog_exclusions|escape}</h3>
+                    <p class="sviat_ma__hint">{$btr->sviat__merchant_api__catalog_exclusions_hint|escape}</p>
+                    <div class="sviat_ma__pickers">
+                        <div class="sviat_ma__field">
+                            <label class="heading_label" for="sviat_ma_exc_cat">{$btr->sviat__merchant_api__catalog_categories|escape}</label>
+                            <select id="sviat_ma_exc_cat" name="exclude_categories[]" class="selectpicker form-control" multiple data-live-search="true" data-selected-text-format="count" data-size="10" title="{$btr->sviat__merchant_api__catalog_none|escape}">
+                                {ma_category_options categories=$ma_catalog_categories selected=$ma_c->excludeCategories}
+                            </select>
+                        </div>
+                        <div class="sviat_ma__field">
+                            <label class="heading_label" for="sviat_ma_exc_brand">{$btr->sviat__merchant_api__catalog_brands|escape}</label>
+                            <select id="sviat_ma_exc_brand" name="exclude_brands[]" class="selectpicker form-control" multiple data-live-search="true" data-selected-text-format="count" data-size="10" title="{$btr->sviat__merchant_api__catalog_none|escape}">
+                                {foreach $ma_catalog_brands as $ma_brand}<option value="{$ma_brand->id|escape}"{if in_array($ma_brand->id, $ma_c->excludeBrands)} selected{/if}>{$ma_brand->name|escape}</option>{/foreach}
+                            </select>
+                        </div>
+                        <div class="sviat_ma__field sviat_ma__product_picker">
+                            <label class="heading_label" for="exclude_products_compact_product_list">{$btr->sviat__merchant_api__catalog_products|escape}</label>
+                            {backend_compact_product_list name="exclude_products" products=$ma_catalog_exclude_products placeholder=$btr->sviat__merchant_api__catalog_find_product}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="sviat_ma__section">
+                    <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__catalog_data|escape}</h3>
+                    <div class="sviat_ma__pickers">
+                        <div class="sviat_ma__field">
+                            <label class="heading_label" for="sviat_ma_oos">{$btr->sviat__merchant_api__catalog_out_of_stock|escape}</label>
+                            <select id="sviat_ma_oos" name="send_out_of_stock" class="selectpicker form-control">
+                                <option value="1"{if $ma_c->sendOutOfStock} selected{/if}>{$btr->sviat__merchant_api__catalog_out_of_stock_send|escape}</option>
+                                <option value="0"{if !$ma_c->sendOutOfStock} selected{/if}>{$btr->sviat__merchant_api__catalog_out_of_stock_skip|escape}</option>
+                            </select>
+                        </div>
+                        <div class="sviat_ma__field">
+                            <label class="heading_label" for="sviat_ma_desc">{$btr->sviat__merchant_api__catalog_description|escape}</label>
+                            <select id="sviat_ma_desc" name="description" class="selectpicker form-control">
+                                <option value="short"{if $ma_c->description == 'short'} selected{/if}>{$btr->sviat__merchant_api__catalog_description_short|escape}</option>
+                                <option value="full"{if $ma_c->description == 'full'} selected{/if}>{$btr->sviat__merchant_api__catalog_description_full|escape}</option>
+                            </select>
+                        </div>
+                        <div class="sviat_ma__field">
+                            <label class="heading_label" for="sviat_ma_min">{$btr->sviat__merchant_api__catalog_min_price|escape}</label>
+                            <input id="sviat_ma_min" class="form-control" name="min_price" inputmode="numeric" pattern="[0-9]*" value="{$ma_c->minPrice|escape}" placeholder="{$btr->sviat__merchant_api__catalog_min_price_none|escape}">
+                        </div>
+                    </div>
+                    <details class="sviat_ma__more"{if $ma_c->detailFeatureIds} open{/if}>
+                        <summary>{$btr->sviat__merchant_api__catalog_details|escape}</summary>
+                        <p class="sviat_ma__hint">{$btr->sviat__merchant_api__catalog_details_hint|escape}</p>
+                        <select name="detail_feature_ids[]" class="selectpicker form-control" multiple data-live-search="true" data-selected-text-format="count" data-size="10" title="{$btr->sviat__merchant_api__catalog_none|escape}" aria-label="{$btr->sviat__merchant_api__catalog_details|escape}">
+                            {foreach $ma_catalog_features as $ma_feature}<option value="{$ma_feature->id|escape}"{if in_array($ma_feature->id, $ma_c->detailFeatureIds)} selected{/if}>{$ma_feature->name|escape}</option>{/foreach}
+                        </select>
+                    </details>
+                </section>
+
+                <div class="sviat_ma__buttons">
+                    <button type="submit" class="btn btn_small btn_blue">{$btr->general_apply|escape}</button>
+                </div>
+            </form>
+        </div>
+
         {* Синхронізація *}
         <div id="ma_sync" class="tab">
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__mode|escape}</h3>
+                {ma_alert section='sync'}
                 <form method="post" class="sviat_ma__form sviat_ma__form--wide">
                     <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
                     <input type="hidden" name="action" value="save_sync">
@@ -340,6 +482,7 @@
 
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__state|escape}</h3>
+                {ma_alert section='state'}
                 <div class="sviat_ma__scroll">
                     <table class="sviat_ma__table">
                         <thead><tr><th>{$btr->sviat__merchant_api__col_language|escape}</th><th class="is-num">{$btr->sviat__merchant_api__col_known|escape}</th><th class="is-num">{$btr->sviat__merchant_api__col_sent|escape}</th><th class="is-num">{$btr->sviat__merchant_api__col_failed|escape}</th><th></th></tr></thead>

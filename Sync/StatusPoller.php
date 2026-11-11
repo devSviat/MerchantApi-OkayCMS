@@ -31,13 +31,14 @@ class StatusPoller
     ) {
     }
 
-    public function poll(): void
+    /** @param bool $manual кнопка в адмінці: лише читання, тож пауза її не зупиняє */
+    public function poll(bool $manual = false): void
     {
         $this->pruneRuns();
 
         $key = $this->credentials->load();
         $accountId = $this->settings->accountId();
-        if ($this->settings->isPaused() || $key === null || $accountId === null) {
+        if (!self::shouldPoll($this->settings->isPaused(), $manual, $key !== null && $accountId !== null)) {
             return;
         }
 
@@ -114,6 +115,12 @@ class StatusPoller
             'severity' => $severity,
             'issues' => (string) json_encode($issues, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ];
+    }
+
+    /** Пауза зупиняє щоденне опитування, але не кнопку: під час підготовки переходу кількість потрібна саме тоді. */
+    public static function shouldPoll(bool $paused, bool $manual, bool $connected): bool
+    {
+        return $connected && (!$paused || $manual);
     }
 
     /**

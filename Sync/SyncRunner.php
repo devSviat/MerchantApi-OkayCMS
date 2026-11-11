@@ -110,6 +110,7 @@ class SyncRunner
             'blocked_deletes' => $plan->blockedDeletes,
         ];
         $summary = [
+            'skipped' => $target->removing ? [] : $this->items->lastSkipped(),
             'counts' => $plan->counts,
             'planned' => count($plan->operations),
             'warnings' => $warnings,
@@ -161,7 +162,7 @@ class SyncRunner
         $built = [];
         $warnings = [];
         $badIds = [];
-        foreach ($this->items->build($target->langId, $target->feedId, (string) $this->settings->siteUrl()) as $key => $feedItem) {
+        foreach ($this->items->build($target->langId, (string) $this->settings->siteUrl()) as $key => $feedItem) {
             $mapped = $mapper->fromFeedItem($feedItem, $target->contentLanguage, $target->feedLabel);
             if ($mapped->offerId === '' || strlen($mapped->offerId) > 64 || isset($built[$mapped->offerId])) {
                 $badIds[(string) $key] = ['bad_offer_id'];

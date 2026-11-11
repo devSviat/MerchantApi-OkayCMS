@@ -210,7 +210,7 @@ class ModuleSettings
     /**
      * Джерела даних, прочитані з Google останнього разу (для вибору в адмінці без запиту на кожне відкриття).
      *
-     * @return array{fetched_at: ?string, sources: list<array{name: string, display_name: string, input: string, content_language: ?string, feed_label: ?string, countries: list<string>, primary: bool}>}
+     * @return array{fetched_at: ?string, sources: list<array{name: string, display_name: string, input: string, content_language: ?string, feed_label: ?string, countries: list<string>, primary: bool, destinations: list<array{destination: string, state: string}>}>}
      */
     public function sourcesCache(): array
     {
@@ -262,6 +262,29 @@ class ModuleSettings
             ];
         }
         $this->settings->set(self::PREFIX . 'sources_cache', ['fetched_at' => $fetchedAt->format(DATE_ATOM), 'sources' => $rows]);
+    }
+
+    /**
+     * Додає одне джерело до кешу (ресурс DataSource з відповіді Google). Після dataSources.create Google віддає нове
+     * джерело в списку не одразу, і без цього адмінка вважала б прив'язку хибною.
+     *
+     * @param array<string, mixed> $source
+     */
+    public function rememberSource(array $source): void
+    {
+        $cache = $this->settings->get(self::PREFIX . 'sources_cache');
+        $cache = is_array($cache) ? $cache : [];
+        $raw = [];
+        foreach ($this->sourcesCache()['sources'] as $row) {
+            if ($row['name'] !== ($source['name'] ?? null)) {
+                $raw[] = ['name' => $row['name'], 'displayName' => $row['display_name'], 'input' => $row['input'], 'primaryProductDataSource' => $row['primary']
+                    ? ['contentLanguage' => $row['content_language'], 'feedLabel' => $row['feed_label'], 'countries' => $row['countries'], 'destinations' => $row['destinations']]
+                    : null];
+            }
+        }
+        $raw[] = $source;
+        $fetchedAt = is_string($cache['fetched_at'] ?? null) ? new \DateTimeImmutable($cache['fetched_at']) : new \DateTimeImmutable();
+        $this->setSourcesCache($raw, $fetchedAt);
     }
 
     /** @return array<string, mixed> */

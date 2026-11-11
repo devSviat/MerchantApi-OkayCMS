@@ -2,14 +2,19 @@
 
 namespace Okay\Modules\Sviat\MerchantApi\Init;
 
+use Okay\Core\EntityFactory;
 use Okay\Core\Languages;
 use Okay\Core\Modules\AbstractInit;
 use Okay\Core\Modules\EntityField;
+use Okay\Core\QueryFactory;
 use Okay\Core\Scheduler\Schedule;
 use Okay\Core\ServiceLocator;
+use Okay\Core\Settings;
+use Okay\Entities\CategoriesEntity;
 use Okay\Modules\Sviat\MerchantApi\Entities\MerchantApiIssuesEntity;
 use Okay\Modules\Sviat\MerchantApi\Entities\MerchantApiItemsEntity;
 use Okay\Modules\Sviat\MerchantApi\Entities\MerchantApiRunsEntity;
+use Okay\Modules\Sviat\MerchantApi\Services\CatalogSettings;
 use Okay\Modules\Sviat\MerchantApi\Sync\StatusPoller;
 use Okay\Modules\Sviat\MerchantApi\Sync\SyncRunner;
 
@@ -63,6 +68,33 @@ class Init extends AbstractInit
         ]);
     }
 
+    /**
+     * 2.0: модуль сам вибирає товари. Вибір і два налаштування один раз переносяться з OkayCMS/GoogleMerchant,
+     * щоб у Google пішло те саме, що й до оновлення; збережений вибір модуля не перезаписується.
+     */
+    public function update_2_0_0(): void
+    {
+        $locator = ServiceLocator::getInstance();
+        $settings = $locator->getService(Settings::class);
+        $queryFactory = $locator->getService(QueryFactory::class);
+        if (CatalogSettings::isStored($settings) || !self::tableExists($queryFactory, 'okaycms__google_merchant__relations')) {
+            return;
+        }
+
+        $relations = $queryFactory->newSelect()
+            ->from('__okaycms__google_merchant__relations')
+            ->cols(['feed_id', 'entity_type', 'entity_id', 'include'])
+            ->results();
+        $gmSettings = [];
+        foreach (['okaycms__google_merchant__upload_non_exists_products_to_google', 'okaycms__google_merchant__use_full_description_to_google'] as $name) {
+            $gmSettings[$name] = $settings->get($name);
+        }
+        $allCategories = (int) $locator->getService(EntityFactory::class)->get(CategoriesEntity::class)->count();
+
+        CatalogSettings::fromGoogleMerchant(array_map(static fn(object $row) => (array) $row, $relations), $gmSettings, $allCategories)
+            ->toSettings($settings);
+    }
+
     public function init()
     {
         $this->addPermission(self::PERMISSION);
@@ -105,5 +137,21 @@ class Init extends AbstractInit
                     ->timeout(1800)
             );
         }
+    }
+
+    /** information_schema, а не пробний SELECT: помилка запиту до відсутньої таблиці потрапила б у лог як ERROR. */
+    private static function tableExists(QueryFactory $queryFactory, string $table): bool
+    {
+        return (int) $queryFactory->newSqlQuery()
+            ->setStatement('SELECT COUNT(*) AS count FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table')
+            ->bindValue('table', self::prefixed($table))
+            ->result('count') > 0;
+    }
+
+    private static function prefixed(string $table): string
+    {
+        $prefix = (string) ServiceLocator::getInstance()->getService(\Okay\Core\Config::class)->get('db_prefix');
+
+        return $prefix . ltrim($table, '_');
     }
 }

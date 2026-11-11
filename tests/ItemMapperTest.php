@@ -96,14 +96,33 @@ class ItemMapperTest extends TestCase
         $this->assertArrayNotHasKey('price', $mapped->productInput['productAttributes']);
     }
 
-    public function testNestedFeedValueIsReported(): void
+    /** Характеристика без значення — помилка запису, а не мовчазний пропуск. */
+    public function testIncompleteProductDetailIsReported(): void
     {
         $mapped = new ItemMapper()->fromFeedItem([
             'g:id' => ['data' => '1'],
             'g:product_detail' => ['data' => ['g:attribute_name' => ['data' => 'x']]],
         ], 'uk', 'UA');
 
-        $this->assertSame(['unsupported:g:product_detail'], $mapped->problems);
+        $this->assertSame(['bad_value:g:product_detail'], $mapped->problems);
+        $this->assertArrayNotHasKey('productDetails', $mapped->productInput['productAttributes']);
+    }
+
+    /** І плоский формат MerchantApi, і вкладений формат пресета Feeds; HTML-екранування знімається. */
+    public function testProductDetailMapsToProductDetails(): void
+    {
+        $mapped = new ItemMapper()->fromFeedItem([
+            'g:id' => ['data' => '1'],
+            ['tag' => 'g:product_detail', 'data' => ['g:attribute_name' => 'Напруга', 'g:attribute_value' => '220 &amp; 230 В']],
+            ['tag' => 'g:product_detail', 'data' => ['g:section_name' => ['data' => 'Загальне'], 'g:attribute_name' => ['data' => 'Потужність'], 'g:attribute_value' => ['data' => '2 кВт']]],
+            'g:nested' => ['data' => ['x' => 1]],
+        ], 'uk', 'UA');
+
+        $this->assertSame([
+            ['attributeName' => 'Напруга', 'attributeValue' => '220 & 230 В'],
+            ['sectionName' => 'Загальне', 'attributeName' => 'Потужність', 'attributeValue' => '2 кВт'],
+        ], $mapped->productInput['productAttributes']['productDetails']);
+        $this->assertSame(['unsupported:g:nested'], $mapped->problems);
     }
 
     public function testMissingIdIsAProblem(): void

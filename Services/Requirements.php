@@ -2,8 +2,6 @@
 
 namespace Okay\Modules\Sviat\MerchantApi\Services;
 
-use Okay\Modules\OkayCMS\GoogleMerchant\Helpers\GoogleMerchantHelper;
-
 /** Що потрібно модулю від сервера й OkayCMS; без цього синхронізація не вмикається. */
 class Requirements
 {
@@ -15,9 +13,6 @@ class Requirements
             if (!extension_loaded($extension)) {
                 $missing[] = "sviat__merchant_api__req_ext_{$extension}";
             }
-        }
-        if (!class_exists(GoogleMerchantHelper::class)) {
-            $missing[] = 'sviat__merchant_api__req_google_merchant';
         }
 
         return $missing;

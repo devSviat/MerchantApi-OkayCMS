@@ -7,8 +7,11 @@ use InvalidArgumentException;
 use Okay\Admin\Controllers\IndexAdmin;
 use Okay\Core\EntityFactory;
 use Okay\Core\Request;
+use Okay\Entities\BrandsEntity;
+use Okay\Entities\CategoriesEntity;
+use Okay\Entities\FeaturesEntity;
 use Okay\Entities\VariantsEntity;
-use Okay\Modules\OkayCMS\GoogleMerchant\Entities\GoogleMerchantFeedsEntity;
+use Okay\Modules\Sviat\MerchantApi\Services\CatalogProducts;
 use Okay\Modules\Sviat\MerchantApi\Entities\MerchantApiIssuesEntity;
 use Okay\Modules\Sviat\MerchantApi\Entities\MerchantApiItemsEntity;
 use Okay\Modules\Sviat\MerchantApi\Entities\MerchantApiRunsEntity;
@@ -17,6 +20,8 @@ use Okay\Modules\Sviat\MerchantApi\Google\AuthFailure;
 use Okay\Modules\Sviat\MerchantApi\Google\InvalidServiceAccountKey;
 use Okay\Modules\Sviat\MerchantApi\Google\MerchantClient;
 use Okay\Modules\Sviat\MerchantApi\Google\MerchantClientFactory;
+use Okay\Modules\Sviat\MerchantApi\Services\CatalogSettings;
+use Okay\Modules\Sviat\MerchantApi\Services\CatalogStats;
 use Okay\Modules\Sviat\MerchantApi\Services\CredentialStore;
 use Okay\Modules\Sviat\MerchantApi\Services\FileSourceMatch;
 use Okay\Modules\Sviat\MerchantApi\Services\LanguageTarget;
@@ -34,6 +39,23 @@ class MerchantApiAdmin extends IndexAdmin
     private const int ISSUES_SHOWN = 300;
     // Таймаут задачі синхронізації в планувальнику (Init::registerSyncSchedules) і хвилина запасу.
     private const int RUN_TIMEOUT_SECONDS = 1860;
+    /** Дія → секція сторінки, де показати її результат. */
+    private const array SECTIONS = [
+        'upload_key' => 'key',
+        'delete_key' => 'key',
+        'save_connection' => 'account',
+        'test_connection' => 'access',
+        'register_gcp' => 'access',
+        'save_languages' => 'languages',
+        'create_source' => 'languages',
+        'poll_statuses' => 'sources',
+        'save_price_label' => 'price_label',
+        'save_catalog' => 'catalog',
+        'save_sync' => 'sync',
+        'confirm_deletes' => 'state',
+    ];
+
+    private ?string $section = null;
 
     private CredentialStore $credentials;
     private ModuleSettings $moduleSettings;
@@ -46,6 +68,8 @@ class MerchantApiAdmin extends IndexAdmin
         MerchantClientFactory $clients,
         EntityFactory $entityFactory,
         StatusPoller $statusPoller,
+        CatalogStats $catalogStats,
+        CatalogProducts $catalogProducts,
     ) {
         $this->credentials = $credentials;
         $this->moduleSettings = $moduleSettings;
@@ -53,6 +77,7 @@ class MerchantApiAdmin extends IndexAdmin
 
         // Дія — лише з POST: на невалідному CSRF-токені ядро очищає $_POST, а $_FILES лишає.
         if ($this->request->method('post')) {
+            $this->section = self::sectionOf((string) $this->request->post('action'));
             match ($this->request->post('action')) {
                 'upload_key' => $this->uploadKey(),
                 'delete_key' => $this->done('key_deleted', fn() => $credentials->delete()),
@@ -65,12 +90,14 @@ class MerchantApiAdmin extends IndexAdmin
                 'save_sync' => $this->saveSync(),
                 'confirm_deletes' => $this->confirmDeletes(),
                 // Під час переходу з файлу кількість товарів у джерелах потрібна зараз, а не о 06:40.
-                'poll_statuses' => $this->done('statuses_polled', fn() => $statusPoller->poll()),
+                'poll_statuses' => $this->done('statuses_polled', fn() => $statusPoller->poll(manual: true)),
+                'save_catalog' => $this->saveCatalog(),
                 default => null,
             };
         }
 
         $this->assignView($requirements, $entityFactory);
+        $this->assignCatalog($entityFactory, $catalogStats, $catalogProducts);
         $this->response->setContent($this->design->fetch('merchant_api.tpl'));
     }
 
@@ -167,7 +194,6 @@ class MerchantApiAdmin extends IndexAdmin
                 $langId,
                 self::contentLanguage($language),
                 strtoupper(trim((string) ($row['feed_label'] ?? ''))),
-                (int) ($row['feed_id'] ?? 0),
                 $dataSource === '' ? null : $dataSource,
             );
             $error = match (true) {
@@ -221,7 +247,7 @@ class MerchantApiAdmin extends IndexAdmin
             $name = trim((string) $this->settings->get('site_name')) . ' API ' . strtoupper($target->contentLanguage);
             $created = $client->createApiDataSource($name, $target->contentLanguage, $target->feedLabel, $this->moduleSettings->countries(), $fileSource['destinations'] ?? []);
             $sourceName = (string) ($created['name'] ?? '');
-            $bound = LanguageTarget::create($target->langId, $target->contentLanguage, $target->feedLabel, $target->feedId, $sourceName);
+            $bound = LanguageTarget::create($target->langId, $target->contentLanguage, $target->feedLabel, $sourceName);
             if ($bound === null) {
                 $this->fail('create_source');
                 return;
@@ -233,6 +259,8 @@ class MerchantApiAdmin extends IndexAdmin
                 $this->moduleSettings->setSourcesCache($client->listDataSources(), new DateTimeImmutable());
             } catch (ApiError | AuthFailure | TransportFailure) {
             }
+            // Google показує нове джерело у списку із затримкою — без цього прив'язка виглядала б хибною.
+            $this->moduleSettings->rememberSource($created);
             $this->done('source_created');
         });
     }
@@ -308,22 +336,58 @@ class MerchantApiAdmin extends IndexAdmin
         }
     }
 
+    private function saveCatalog(): void
+    {
+        $fields = ['mode', 'include_categories', 'include_brands', 'include_products', 'exclude_categories', 'exclude_brands',
+            'exclude_products', 'send_out_of_stock', 'description', 'min_price', 'detail_feature_ids'];
+        // Request::post() без імені віддає сире тіло запиту, а не масив полів.
+        $catalog = CatalogSettings::fromForm(array_combine($fields, array_map(fn(string $field) => $this->request->post($field), $fields)));
+        if ($catalog === null) {
+            $this->fail('catalog');
+            return;
+        }
+        $catalog->toSettings($this->settings);
+        $this->done('saved');
+    }
+
     private function done(string $message, ?callable $action = null): void
     {
         if ($action !== null) {
             $action();
         }
-        $this->postRedirectGet->storeMessageSuccess($message);
+        // Секція їде разом із повідомленням: після редиректу POST уже немає, а показати треба біля дії.
+        $this->postRedirectGet->storeMessageSuccess($this->section === null ? $message : "{$this->section}:{$message}");
         $this->postRedirectGet->redirect();
     }
 
     private function fail(string $message): void
     {
         $this->design->assign('message_error', $message);
+        $this->design->assign('ma_message_section', $this->section);
+    }
+
+    /** @return array{0: ?string, 1: string} секція (або null — показати вгорі) і ключ повідомлення */
+    public static function splitMessage(string $stored): array
+    {
+        [$section, $key] = str_contains($stored, ':') ? explode(':', $stored, 2) : [null, $stored];
+
+        return in_array($section, self::SECTIONS, true) ? [$section, $key] : [null, $stored];
+    }
+
+    public static function sectionOf(string $action): ?string
+    {
+        return self::SECTIONS[$action] ?? null;
     }
 
     private function assignView(Requirements $requirements, EntityFactory $entityFactory): void
     {
+        $stored = $this->design->getVar('message_success');
+        if (is_string($stored) && $stored !== '') {
+            [$section, $key] = self::splitMessage($stored);
+            $this->design->assign('message_success', $key);
+            $this->design->assign('ma_message_section', $section);
+        }
+
         $targets = $this->moduleSettings->languages();
         $sources = $this->moduleSettings->sourcesCache();
         $apiSources = $this->apiSourcesByName();
@@ -389,7 +453,6 @@ class MerchantApiAdmin extends IndexAdmin
         $this->design->assign('ma_countries', implode(', ', $this->moduleSettings->countries()));
         $this->design->assign('ma_languages', $languages);
         $this->design->assign('ma_lang_names', array_column($languages, 'name', 'id'));
-        $this->design->assign('ma_feeds', class_exists(GoogleMerchantFeedsEntity::class) ? $entityFactory->get(GoogleMerchantFeedsEntity::class)->find() : []);
         $this->design->assign('ma_sources', $sources['sources']);
         $this->design->assign('ma_sources_fetched_at', $sources['fetched_at']);
         $this->design->assign('ma_price_label', $this->moduleSettings->priceLabelRaw());
@@ -404,6 +467,31 @@ class MerchantApiAdmin extends IndexAdmin
         $this->design->assign('ma_mode', $this->moduleSettings->isPaused() ? 'paused' : ($this->moduleSettings->isDryRun() ? 'dry' : 'live'));
         $this->design->assign('ma_steps', $this->steps($languages, $sources['fetched_at']));
         $this->design->assign('ma_issues', $issues);
+    }
+
+    private function assignCatalog(EntityFactory $entityFactory, CatalogStats $catalogStats, CatalogProducts $catalogProducts): void
+    {
+        $catalog = CatalogSettings::fromSettings($this->settings);
+        $lastSkipped = null;
+        foreach ($entityFactory->get(MerchantApiRunsEntity::class)->find(['limit' => self::RUNS_SHOWN]) as $run) {
+            $summary = json_decode((string) $run->summary, true);
+            if ($run->status !== 'running' && is_array($summary['skipped'] ?? null)) {
+                $lastSkipped = $summary['skipped'];
+                break;
+            }
+        }
+
+        $products = $catalogProducts->byId(array_merge($catalog->includeProducts, $catalog->excludeProducts));
+        $pick = static fn(array $ids) => array_values(array_filter(array_map(static fn($id) => $products[$id] ?? null, $ids)));
+
+        $this->design->assign('ma_catalog', $catalog);
+        $this->design->assign('ma_catalog_stats', $catalogStats->summarize($catalog, $lastSkipped));
+        $this->design->assign('ma_run_reasons', CatalogStats::RUN_REASONS);
+        $this->design->assign('ma_catalog_categories', $entityFactory->get(CategoriesEntity::class)->getCategoriesTree());
+        $this->design->assign('ma_catalog_brands', $entityFactory->get(BrandsEntity::class)->noLimit()->find());
+        $this->design->assign('ma_catalog_features', $entityFactory->get(FeaturesEntity::class)->noLimit()->find());
+        $this->design->assign('ma_catalog_include_products', $pick($catalog->includeProducts));
+        $this->design->assign('ma_catalog_exclude_products', $pick($catalog->excludeProducts));
     }
 
     /**
