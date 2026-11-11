@@ -39,6 +39,11 @@ class MerchantApiAdmin extends IndexAdmin
     // JSON-ключ сервісного акаунта — ~2,4 КБ; більший файл — точно не він.
     private const int MAX_KEY_BYTES = 16384;
     private const int RUNS_SHOWN = 20;
+    // Іконки груп лічильників у журналі (svg_icon.tpl, набір Tabler).
+    private const array COUNT_ICONS = [
+        'new' => 'plus', 'critical' => 'tag', 'changed' => 'pencil', 'waiting' => 'clock', 'refresh' => 'calendar',
+        'retry' => 'refresh_icon', 'gone' => 'trash', 'unchanged' => 'check',
+    ];
     private const int ISSUES_SHOWN = 300;
     // Таймаут задачі синхронізації в планувальнику (Init::registerSyncSchedules) і хвилина запасу.
     private const int RUN_TIMEOUT_SECONDS = 1860;
@@ -467,6 +472,7 @@ class MerchantApiAdmin extends IndexAdmin
         foreach ($runsEntity->find(['limit' => self::RUNS_SHOWN]) as $run) {
             $summary = json_decode((string) $run->summary, true);
             $run->summary_data = is_array($summary) ? $summary : [];
+            $run->shown_counts = SyncPlanner::displayCounts(is_array($run->summary_data['counts'] ?? null) ? $run->summary_data['counts'] : []);
             // «running» без завершення довше за таймаут — процес обірвано, рядок уже ніхто не оновить.
             if ($run->status === 'running' && strtotime((string) $run->started_at) < $staleBefore) {
                 $run->status = 'interrupted';
@@ -507,7 +513,7 @@ class MerchantApiAdmin extends IndexAdmin
         $this->design->assign('ma_dry_run', $this->moduleSettings->isDryRun());
         $this->design->assign('ma_ops_per_run', $this->moduleSettings->opsPerRun());
         $this->design->assign('ma_runs', $runs);
-        $this->design->assign('ma_count_reasons', SyncPlanner::COUNT_REASONS);
+        $this->design->assign('ma_count_icons', self::COUNT_ICONS);
         $this->design->assign('ma_status', $this->moduleSettings->statusSummary());
         $this->design->assign('ma_mode', $this->moduleSettings->isPaused() ? 'paused' : ($this->moduleSettings->isDryRun() ? 'dry' : 'live'));
         $this->design->assign('ma_steps', $this->steps($languages, $sources['fetched_at']));
