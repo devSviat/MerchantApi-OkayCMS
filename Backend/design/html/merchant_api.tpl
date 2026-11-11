@@ -453,9 +453,9 @@
                             </div>
                         {/foreach}
                     </fieldset>
-                    <div class="sviat_ma__field">
+                    <div class="sviat_ma__field sviat_ma__field--ops">
                         <label class="heading_label" for="sviat_ma_ops">{$btr->sviat__merchant_api__ops_per_run|escape}</label>
-                        <select class="selectpicker form-control" id="sviat_ma_ops" name="ops_per_run" data-width="fit" aria-describedby="sviat_ma_ops_hint">
+                        <select class="selectpicker form-control" id="sviat_ma_ops" name="ops_per_run" aria-describedby="sviat_ma_ops_hint">
                             {if !in_array($ma_ops_per_run, $ma_ops_choices)}<option value="{$ma_ops_per_run|escape}" selected>{$btr->sviat__merchant_api__ops_current|sprintf:$ma_ops_per_run|escape}</option>{/if}
                             {foreach $ma_ops_choices as $ma_ops}
                                 <option value="{$ma_ops|escape}"{if $ma_ops == $ma_ops_per_run} selected{/if}>{$ma_ops|escape} — {$btr->getTranslation("sviat__merchant_api__ops_choice_`$ma_ops`")|escape}</option>
