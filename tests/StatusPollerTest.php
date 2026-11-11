@@ -41,6 +41,40 @@ class StatusPollerTest extends TestCase
         $this->assertSame(300, mb_strlen($issues[1]['description']));
     }
 
+    /** Кнопка «Оновити статуси й кількість» перечитує й список джерел: інакше перейменоване джерело видно лише після «Перевірити зв’язок». */
+    public function testPollRefreshesDataSourceList(): void
+    {
+        $settings = new ModuleSettings($this->settingsStub());
+        $settings->setAccountId('123');
+        new \Okay\Modules\Sviat\MerchantApi\Services\CredentialStore($this->settingsStub())->saveJson(TestKeys::json(), new DateTimeImmutable());
+        $google = new FakeGoogle();
+        $google->dataSources = [['name' => 'accounts/123/dataSources/20', 'displayName' => 'Shop — API UA', 'input' => 'API', 'primaryProductDataSource' => ['contentLanguage' => 'uk', 'feedLabel' => '-']]];
+        $clients = new class ($google) extends \Okay\Modules\Sviat\MerchantApi\Google\MerchantClientFactory {
+            public function __construct(private FakeGoogle $google)
+            {
+                parent::__construct($google);
+            }
+
+            public function create(\Okay\Modules\Sviat\MerchantApi\Google\ServiceAccountKey $key, string $accountId): \Okay\Modules\Sviat\MerchantApi\Google\MerchantClient
+            {
+                return new \Okay\Modules\Sviat\MerchantApi\Google\MerchantClient(new \Okay\Modules\Sviat\MerchantApi\Google\GoogleAuth($key, $this->google, fn() => 1_800_000_000), $this->google, $accountId, fn() => null);
+            }
+        };
+        $entities = $this->createStub(\Okay\Core\EntityFactory::class);
+        $entities->method('get')->willReturnCallback(function (string $class) {
+            $entity = $this->createStub($class);
+            $entity->method('cols')->willReturnSelf();
+            $entity->method('noLimit')->willReturnSelf();
+            $entity->method('find')->willReturn([]);
+
+            return $entity;
+        });
+
+        new StatusPoller($settings, new \Okay\Modules\Sviat\MerchantApi\Services\CredentialStore($this->settingsStub()), $clients, $entities, new \Okay\Modules\Sviat\MerchantApi\Sync\Clock())->poll(manual: true);
+
+        $this->assertSame(['Shop — API UA'], array_column($settings->sourcesCache()['sources'], 'display_name'));
+    }
+
     public function testSourcesCacheKeepsOnlyValidResourceNames(): void
     {
         $settings = new ModuleSettings($this->settingsStub());

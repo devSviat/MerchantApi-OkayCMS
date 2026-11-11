@@ -12,7 +12,7 @@ use Okay\Modules\Sviat\MerchantApi\Services\CredentialStore;
 use Okay\Modules\Sviat\MerchantApi\Services\ModuleSettings;
 
 /**
- * Раз на добу: статуси й проблеми всіх товарів акаунта (products.list, по 1000 на сторінку).
+ * Раз на добу: статуси й проблеми всіх товарів акаунта (products.list, по 1000 на сторінку) і список джерел.
  * Зберігаються лише товари з проблемами — щоб адмінка показувала, що виправити, а не весь каталог.
  */
 class StatusPoller
@@ -47,6 +47,8 @@ class StatusPoller
         $summary = ['products' => 0, 'disapproved' => 0, 'demoted' => 0, 'by_source' => []];
         $pageToken = null;
         try {
+            // Список джерел — заразом: назви й кількості в адмінці мають збігатися з Merchant Center після однієї кнопки.
+            $this->settings->setSourcesCache($client->listDataSources(), $this->clock->now());
             for ($page = 0; $page < self::MAX_PAGES; $page++) {
                 $result = $client->listProducts($pageToken);
                 foreach ($result['products'] as $product) {
