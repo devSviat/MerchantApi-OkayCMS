@@ -77,6 +77,11 @@
     border-top: 1px solid var(--ok-line);
 }
 
+/* Лічильник «Товари» стоїть окремою секцією перед формою, а не поруч з іншою секцією. */
+.sviat_ma__section + .sviat_ma__catalog {
+    margin-top: 24px;
+}
+
 .sviat_ma__h {
     margin: 0 0 8px;
     font-size: 16px;
@@ -386,24 +391,20 @@
     font-weight: 700;
 }
 
-.sviat_ma__why {
-    margin-top: 10px;
-}
-
-.sviat_ma__why summary,
 .sviat_ma__more summary {
     cursor: pointer;
     color: var(--ok-accent, #135c94);
 }
 
-.sviat_ma__why ul {
-    margin: 8px 0 0;
-    padding-left: 18px;
+.sviat_ma__reasons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
 }
 
-.sviat_ma__samples {
-    font-size: 12px;
-    color: var(--ok-ink-soft);
+.sviat_ma__reason {
+    white-space: nowrap;
+    color: var(--ok-ink);
 }
 
 .sviat_ma__radios {
@@ -554,4 +555,12 @@
 
 .sviat_ma__count.is-failed .sviat_ma__hint {
     color: var(--ok-danger);
+}
+
+/* Таблиця мов на широкому екрані вміщується, а підказка біля мітки виступає під останнім рядком: у контейнері
+   з прокруткою вона давала вертикальну смугу. Прокрутка потрібна лише на вузькому екрані. */
+@media (min-width: 992px) {
+    .sviat_ma__scroll--wide-visible {
+        overflow: visible;
+    }
 }

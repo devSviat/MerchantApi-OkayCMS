@@ -101,7 +101,6 @@ return [
         'arguments' => [
             new SR(QueryFactory::class),
             new SR(EntityFactory::class),
-            new SR(Languages::class),
         ],
     ],
     CatalogProducts::class => [

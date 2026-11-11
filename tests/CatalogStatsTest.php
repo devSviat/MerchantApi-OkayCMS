@@ -28,7 +28,6 @@ class CatalogStatsTest extends TestCase
         $this->assertSame(8, $stats['total']);
         $this->assertSame(['no_image' => 1, 'zero_price' => 1, 'not_selected' => 1, 'excluded_category' => 1, 'excluded_brand' => 1, 'excluded_product' => 1], $stats['reasons']);
         $this->assertSame(2, $stats['sent']);
-        $this->assertSame([['product_id' => 5, 'name' => 'Товар 5']], $stats['samples']['excluded_brand']);
     }
 
     /** Наявність після розширень і мінімальну ціну видно лише зі збірки — їх додає останній запуск. */
@@ -57,26 +56,11 @@ class CatalogStatsTest extends TestCase
         $this->assertSame(['not_selected' => 2], $stats['reasons']);
     }
 
-    public function testSamplesAreCappedAndDistinctProducts(): void
-    {
-        $rows = [];
-        foreach (range(1, 30) as $i) {
-            $rows[] = $this->row($i, image: false);
-            $rows[] = $this->row($i, image: false);
-        }
-
-        $stats = CatalogStats::partition($rows, new CatalogSettings(), [], [], null);
-
-        $this->assertSame(60, $stats['reasons']['no_image']);
-        $this->assertCount(20, $stats['samples']['no_image']);
-        $this->assertSame(range(1, 20), array_column($stats['samples']['no_image'], 'product_id'));
-    }
-
     /** @param list<int> $categories */
     private function row(int $id, bool $image = true, float $price = 100.0, array $categories = [1], ?int $brand = 3, ?int $product = null): array
     {
         $productId = $product ?? $id;
 
-        return ['product_id' => $productId, 'name' => "Товар {$productId}", 'has_image' => $image, 'price' => $price, 'brand_id' => $brand, 'category_ids' => $categories];
+        return ['product_id' => $productId, 'has_image' => $image, 'price' => $price, 'brand_id' => $brand, 'category_ids' => $categories];
     }
 }
