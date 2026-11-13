@@ -26,6 +26,7 @@ use Okay\Modules\Sviat\MerchantApi\Services\CredentialStore;
 use Okay\Modules\Sviat\MerchantApi\Services\FileSourceMatch;
 use Okay\Modules\Sviat\MerchantApi\Services\LanguageTarget;
 use Okay\Modules\Sviat\MerchantApi\Services\ModuleSettings;
+use Okay\Modules\Sviat\MerchantApi\Services\RunHistory;
 use Okay\Modules\Sviat\MerchantApi\Services\Requirements;
 use Okay\Modules\Sviat\MerchantApi\Http\TransportFailure;
 use Okay\Modules\Sviat\MerchantApi\Mapping\PriceBucketLabel;
@@ -39,6 +40,8 @@ class MerchantApiAdmin extends IndexAdmin
     // JSON-ключ сервісного акаунта — ~2,4 КБ; більший файл — точно не він.
     private const int MAX_KEY_BYTES = 16384;
     private const int RUNS_SHOWN = 20;
+    // Скільки останніх запусків читати, щоб після злиття однакових вистачило на RUNS_SHOWN рядків (~1,5 доби на дві мови).
+    private const int RUNS_READ = 300;
     // Іконки груп лічильників у журналі (svg_icon.tpl, набір Tabler).
     private const array COUNT_ICONS = [
         'new' => 'plus', 'critical' => 'tag', 'changed' => 'pencil', 'waiting' => 'clock', 'refresh' => 'calendar',
@@ -469,7 +472,7 @@ class MerchantApiAdmin extends IndexAdmin
 
         $runs = [];
         $staleBefore = time() - self::RUN_TIMEOUT_SECONDS;
-        foreach ($runsEntity->find(['limit' => self::RUNS_SHOWN]) as $run) {
+        foreach ($runsEntity->find(['limit' => self::RUNS_READ]) as $run) {
             $summary = json_decode((string) $run->summary, true);
             $run->summary_data = is_array($summary) ? $summary : [];
             $run->shown_counts = SyncPlanner::displayCounts(is_array($run->summary_data['counts'] ?? null) ? $run->summary_data['counts'] : []);
@@ -512,7 +515,7 @@ class MerchantApiAdmin extends IndexAdmin
         $this->design->assign('ma_paused', $this->moduleSettings->isPaused());
         $this->design->assign('ma_dry_run', $this->moduleSettings->isDryRun());
         $this->design->assign('ma_ops_per_run', $this->moduleSettings->opsPerRun());
-        $this->design->assign('ma_runs', $runs);
+        $this->design->assign('ma_runs', RunHistory::collapse($runs, self::RUNS_SHOWN));
         $this->design->assign('ma_count_icons', self::COUNT_ICONS);
         $this->design->assign('ma_status', $this->moduleSettings->statusSummary());
         $this->design->assign('ma_mode', $this->moduleSettings->isPaused() ? 'paused' : ($this->moduleSettings->isDryRun() ? 'dry' : 'live'));

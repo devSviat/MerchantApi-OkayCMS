@@ -220,3 +220,4 @@ $lang['sviat__merchant_api__count_unchanged_hint'] = 'Already in Google and unch
 $lang['sviat__merchant_api__catalog_min_price_hint'] = 'Digits only: whole hryvnias, no kopecks.';
 $lang['sviat__merchant_api__count_waiting'] = 'waiting';
 $lang['sviat__merchant_api__count_waiting_hint'] = 'Changed but goes later: price or stock was sent less than an hour ago, other changes less than 12 hours ago, or a retry after an error is not due yet.';
+$lang['sviat__merchant_api__runs_repeat'] = '%s identical runs with no changes, %s–%s';

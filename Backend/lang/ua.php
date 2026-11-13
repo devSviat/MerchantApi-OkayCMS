@@ -220,3 +220,4 @@ $lang['sviat__merchant_api__count_unchanged_hint'] = 'Уже в Google і від
 $lang['sviat__merchant_api__catalog_min_price_hint'] = 'Лише цифри: цілі гривні, без копійок.';
 $lang['sviat__merchant_api__count_waiting'] = 'чекають';
 $lang['sviat__merchant_api__count_waiting_hint'] = 'Змінились, але піде пізніше: ціну чи наявність товару надсилали менше години тому, інші зміни — менше 12 годин тому, або це повтор після помилки, який ще не настав.';
+$lang['sviat__merchant_api__runs_repeat'] = '%s однакових запусків без змін, %s–%s';
