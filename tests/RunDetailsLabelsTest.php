@@ -23,9 +23,9 @@ class RunDetailsLabelsTest extends TestCase
     /** «Пізніше» з різних причин — одним словом із сумою: у журналі має бути компактно. */
     public function testWaitingReasonsAreSummedIntoOneLabel(): void
     {
-        $shown = SyncPlanner::displayCounts(['critical' => 11, 'critical_cooldown' => 1, 'cooldown' => 2, 'backoff' => 3, 'unchanged' => 7514]);
+        $shown = SyncPlanner::displayCounts(['critical' => 11, 'critical_cooldown' => 1, 'cooldown' => 2, 'backoff' => 3, 'unchanged' => 1180]);
 
-        $this->assertSame(['critical' => 11, 'waiting' => 6, 'unchanged' => 7514], $shown);
+        $this->assertSame(['critical' => 11, 'waiting' => 6, 'unchanged' => 1180], $shown);
         $this->assertSame([], array_values(array_diff(SyncPlanner::COUNT_REASONS, array_keys(SyncPlanner::DISPLAY_GROUPS))));
     }
 

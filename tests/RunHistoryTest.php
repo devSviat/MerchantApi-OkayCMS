@@ -28,7 +28,7 @@ class RunHistoryTest extends TestCase
         $rows = RunHistory::collapse([
             $this->syncRun(1, '09:30'),
             $this->syncRun(1, '09:15'),
-            $this->syncRun(1, '09:00', sent: 11, counts: ['critical' => 11, 'unchanged' => 7517]),
+            $this->syncRun(1, '09:00', sent: 11, counts: ['critical' => 11, 'unchanged' => 1189]),
             $this->syncRun(1, '08:45'),
             $this->syncRun(1, '08:30'),
         ], 20);
@@ -42,7 +42,7 @@ class RunHistoryTest extends TestCase
             $this->syncRun(1, '09:30'),
             $this->syncRun(1, '09:15', status: 'failed'),
             $this->syncRun(1, '09:00', status: 'failed'),
-            $this->syncRun(1, '08:45', built: 7529, counts: ['unchanged' => 7529]),
+            $this->syncRun(1, '08:45', built: 1201, counts: ['unchanged' => 1201]),
             $this->syncRun(1, '08:30', status: 'dry'),
             $this->syncRun(1, '08:15', deferred: 5),
             $this->syncRun(1, '08:00', status: 'running'),
@@ -54,11 +54,11 @@ class RunHistoryTest extends TestCase
     /** Сухий прогін повторює той самий план (усе «відкладено»): однакові поспіль — теж один рядок. */
     public function testIdenticalDryRunsCollapse(): void
     {
-        $dry = ['new' => 7539];
+        $dry = ['new' => 1210];
         $rows = RunHistory::collapse([
-            $this->syncRun(1, '16:45', status: 'dry', built: 7539, deferred: 7039, counts: $dry),
-            $this->syncRun(1, '16:30', status: 'dry', built: 7539, deferred: 7039, counts: $dry),
-            $this->syncRun(1, '16:15', status: 'dry', built: 7539, deferred: 7000, counts: $dry),
+            $this->syncRun(1, '16:45', status: 'dry', built: 1210, deferred: 1010, counts: $dry),
+            $this->syncRun(1, '16:30', status: 'dry', built: 1210, deferred: 1010, counts: $dry),
+            $this->syncRun(1, '16:15', status: 'dry', built: 1210, deferred: 1000, counts: $dry),
         ], 20);
 
         $this->assertSame([[1, '16:45', '16:30', 2], [1, '16:15', '16:15', 1]], $this->shape($rows));
@@ -95,7 +95,7 @@ class RunHistoryTest extends TestCase
     }
 
     /** @param array<string, int>|null $counts */
-    private function syncRun(int $lang, string $time, string $status = 'ok', int $built = 7528, int $sent = 0, int $deferred = 0, ?array $counts = null): object
+    private function syncRun(int $lang, string $time, string $status = 'ok', int $built = 1200, int $sent = 0, int $deferred = 0, ?array $counts = null): object
     {
         $counts ??= $sent > 0 ? ['critical' => $sent, 'unchanged' => $built - $sent] : ['unchanged' => $built];
 
