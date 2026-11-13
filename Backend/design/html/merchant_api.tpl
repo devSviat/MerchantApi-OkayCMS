@@ -523,7 +523,17 @@
                             <tbody>
                                 {foreach $ma_runs as $ma_r}
                                     <tr>
-                                        <td class="sviat_ma__nowrap">{$ma_r->started_at|date_format:'%d.%m.%Y %H:%M'|escape}</td>
+                                        <td class="sviat_ma__nowrap">
+                                            {if $ma_r->repeat > 1}
+                                                {$ma_same_day = ($ma_r->first_started_at|date_format:'%Y%m%d') == ($ma_r->started_at|date_format:'%Y%m%d')}
+                                                {$ma_from = $ma_r->first_started_at|date_format:($ma_same_day ? '%H:%M' : '%d.%m.%Y %H:%M')}
+                                                {$ma_range = $btr->sviat__merchant_api__runs_repeat|sprintf:$ma_r->repeat:$ma_from:($ma_r->started_at|date_format:'%H:%M')}
+                                                <span title="{$ma_range|escape}">{if $ma_same_day}{$ma_r->started_at|date_format:'%d.%m.%Y'|escape} {/if}{$ma_from|escape}–{$ma_r->started_at|date_format:'%H:%M'|escape}</span>
+                                                <span class="sviat_ma__repeat" title="{$ma_range|escape}">×{$ma_r->repeat|escape}</span>
+                                            {else}
+                                                {$ma_r->started_at|date_format:'%d.%m.%Y %H:%M'|escape}
+                                            {/if}
+                                        </td>
                                         <td>{$ma_lang_names[$ma_r->lang_id]|default:$ma_r->lang_id|escape}</td>
                                         <td><span class="sviat_ma__status sviat_ma__status--{$ma_r->status|escape}">{$btr->getTranslation("sviat__merchant_api__status_`$ma_r->status`")|escape}</span></td>
                                         <td class="is-num">{$ma_r->built|escape}</td>

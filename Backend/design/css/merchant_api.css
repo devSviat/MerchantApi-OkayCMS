@@ -603,3 +603,15 @@
     flex: none;
     color: var(--ok-ink-soft);
 }
+
+.sviat_ma__repeat {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 0 6px;
+    border-radius: var(--ok-radius-pill);
+    background: var(--ok-accent-soft);
+    color: var(--ok-ink);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: help;
+}
