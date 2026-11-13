@@ -143,6 +143,7 @@
             <section class="sviat_ma__section">
                 <h3 class="sviat_ma__h">{$btr->sviat__merchant_api__access|escape}</h3>
                 {ma_alert section='access'}
+                {if $ma_registration_open}
                 <p class="sviat_ma__hint">{$btr->sviat__merchant_api__register_hint|escape}</p>
                 <form method="post" class="sviat_ma__form">
                     <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
@@ -155,6 +156,9 @@
                         </div>
                     </div>
                 </form>
+                {elseif $ma_registered_project}
+                <p class="sviat_ma__hint">{$btr->sviat__merchant_api__registered_project|escape}: <code>{$ma_registered_project|escape}</code></p>
+                {/if}
                 <form method="post" class="sviat_ma__check">
                     <input type="hidden" name="session_id" value="{$smarty.session.id|escape}">
                     <input type="hidden" name="action" value="test_connection">

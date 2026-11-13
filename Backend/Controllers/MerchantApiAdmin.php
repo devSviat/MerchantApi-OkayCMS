@@ -31,6 +31,7 @@ use Okay\Modules\Sviat\MerchantApi\Services\Requirements;
 use Okay\Modules\Sviat\MerchantApi\Http\TransportFailure;
 use Okay\Modules\Sviat\MerchantApi\Mapping\PriceBucketLabel;
 use Okay\Modules\Sviat\MerchantApi\Sync\EntityRunLog;
+use Okay\Modules\Sviat\MerchantApi\Sync\ModuleLock;
 use Okay\Modules\Sviat\MerchantApi\Sync\StatusPoller;
 use Okay\Modules\Sviat\MerchantApi\Sync\SyncPlanner;
 use Okay\Modules\Sviat\MerchantApi\Sync\SyncRunner;
@@ -72,6 +73,7 @@ class MerchantApiAdmin extends IndexAdmin
     private CredentialStore $credentials;
     private ModuleSettings $moduleSettings;
     private MerchantClientFactory $clients;
+    private ModuleLock $lock;
 
     public function fetch(
         CredentialStore $credentials,
@@ -83,8 +85,10 @@ class MerchantApiAdmin extends IndexAdmin
         CatalogStats $catalogStats,
         CatalogProducts $catalogProducts,
         EntityRunLog $runLog,
+        ModuleLock $lock,
     ) {
         $this->credentials = $credentials;
+        $this->lock = $lock;
         $this->moduleSettings = $moduleSettings;
         $this->clients = $clients;
 
@@ -115,7 +119,7 @@ class MerchantApiAdmin extends IndexAdmin
                 'run_now' => $this->runNow(),
                 'confirm_deletes' => $this->confirmDeletes(),
                 // Під час переходу з файлу кількість товарів у джерелах потрібна зараз, а не о 06:40.
-                'poll_statuses' => $this->done('statuses_polled', fn() => $statusPoller->poll(manual: true)),
+                'poll_statuses' => $statusPoller->poll(manual: true) ? $this->done('statuses_polled') : $this->fail('busy'),
                 'save_catalog' => $this->saveCatalog(),
                 default => null,
             };
@@ -170,12 +174,23 @@ class MerchantApiAdmin extends IndexAdmin
         $this->withClient(function (MerchantClient $client): void {
             $sources = $client->listDataSources();
             $this->moduleSettings->setSourcesCache($sources, new DateTimeImmutable());
+            // Без реєстрації Google відповідає 401, тож робочий запит доводить, що проєкт зареєстровано.
+            $this->rememberRegisteredProject();
             $this->done('connection_ok');
         });
     }
 
     private function registerGcp(): void
     {
+        $project = $this->credentials->summary()['project_id'] ?? null;
+        if ($project === null) {
+            $this->fail('not_connected');
+            return;
+        }
+        if (!ModuleSettings::registrationOpen($project, $this->moduleSettings->registeredProject())) {
+            $this->fail('register_done');
+            return;
+        }
         $email = trim((string) $this->request->post('developer_email'));
         // Google вимагає людину-розробника, не сервісний акаунт.
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || str_ends_with($email, '.gserviceaccount.com')) {
@@ -184,6 +199,7 @@ class MerchantApiAdmin extends IndexAdmin
         }
         $this->withClient(function (MerchantClient $client) use ($email): void {
             $client->registerGcp($email);
+            $this->rememberRegisteredProject();
             $this->done('registered');
         });
     }
@@ -264,7 +280,23 @@ class MerchantApiAdmin extends IndexAdmin
         $this->done('saved');
     }
 
+    private function rememberRegisteredProject(): void
+    {
+        $project = $this->credentials->summary()['project_id'] ?? null;
+        if ($project !== null) {
+            $this->moduleSettings->setRegisteredProject($project);
+        }
+    }
+
     private function createSource(): void
+    {
+        if (!$this->lock->run(ModuleLock::CREATE_SOURCE, $this->createSourceLocked(...))) {
+            $this->fail('busy');
+        }
+    }
+
+    /** Під блокуванням: перевірка «джерела ще немає» без нього пропускала б друге натискання. */
+    private function createSourceLocked(): void
     {
         $langId = (int) $this->request->post('lang_id');
         $targets = $this->moduleSettings->languages();
@@ -500,6 +532,8 @@ class MerchantApiAdmin extends IndexAdmin
 
         $this->design->assign('ma_missing', $requirements->missing());
         $this->design->assign('ma_key', $this->credentials->summary());
+        $this->design->assign('ma_registered_project', $this->moduleSettings->registeredProject());
+        $this->design->assign('ma_registration_open', ModuleSettings::registrationOpen($this->credentials->summary()['project_id'] ?? null, $this->moduleSettings->registeredProject()));
         $this->design->assign('ma_account_id', (string) $this->moduleSettings->accountId());
         $this->design->assign('ma_site_url', $this->moduleSettings->siteUrl() ?? rtrim(Request::getRootUrl(), '/'));
         $this->design->assign('ma_site_url_saved', $this->moduleSettings->siteUrl() !== null);

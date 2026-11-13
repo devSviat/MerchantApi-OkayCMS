@@ -17,6 +17,8 @@ use Okay\Modules\Sviat\MerchantApi\Entities\MerchantApiRunsEntity;
 use Okay\Modules\Sviat\MerchantApi\Services\CatalogSettings;
 use Okay\Modules\Sviat\MerchantApi\Sync\StatusPoller;
 use Okay\Modules\Sviat\MerchantApi\Sync\SyncRunner;
+use Okay\Modules\Sviat\MerchantApi\Services\ModuleSettings;
+use Okay\Modules\Sviat\MerchantApi\Services\CredentialStore;
 
 class Init extends AbstractInit
 {
@@ -93,6 +95,20 @@ class Init extends AbstractInit
 
         CatalogSettings::fromGoogleMerchant(array_map(static fn(object $row) => (array) $row, $relations), $gmSettings, $allCategories)
             ->toSettings($settings);
+    }
+
+    /**
+     * 2.2.1: форма реєстрації ховається для зареєстрованого проєкту. Якщо список джерел уже читався,
+     * запити до API працювали, тобто проєкт ключа зареєстровано, і форма не має з'явитися знову.
+     */
+    public function update_2_2_1(): void
+    {
+        $locator = ServiceLocator::getInstance();
+        $moduleSettings = $locator->getService(ModuleSettings::class);
+        $project = $locator->getService(CredentialStore::class)->summary()['project_id'] ?? null;
+        if ($project !== null && $moduleSettings->registeredProject() === null && $moduleSettings->sourcesCache()['fetched_at'] !== null) {
+            $moduleSettings->setRegisteredProject($project);
+        }
     }
 
     public function init()
