@@ -9,6 +9,8 @@ use Okay\Modules\Sviat\MerchantApi\Services\ModuleSettings;
 use Okay\Modules\Sviat\MerchantApi\Sync\StatusPoller;
 use PHPUnit\Framework\TestCase;
 
+require_once __DIR__ . '/TestLocks.php';
+
 class StatusPollerTest extends TestCase
 {
     /** @var array<string, mixed> */
@@ -70,8 +72,13 @@ class StatusPollerTest extends TestCase
             return $entity;
         });
 
-        new StatusPoller($settings, new \Okay\Modules\Sviat\MerchantApi\Services\CredentialStore($this->settingsStub()), $clients, $entities, new \Okay\Modules\Sviat\MerchantApi\Sync\Clock())->poll(manual: true);
+        $this->assertTrue(new StatusPoller($settings, new \Okay\Modules\Sviat\MerchantApi\Services\CredentialStore($this->settingsStub()), $clients, $entities, new \Okay\Modules\Sviat\MerchantApi\Sync\Clock(), TestLocks::free())->poll(manual: true));
 
+        $this->assertSame(['Shop — API UA'], array_column($settings->sourcesCache()['sources'], 'display_name'));
+
+        // Поки крон опитує, кнопка нічого не запускає: два опитування разом задублювали б проблеми товарів.
+        $google->dataSources = [];
+        $this->assertFalse(new StatusPoller($settings, new \Okay\Modules\Sviat\MerchantApi\Services\CredentialStore($this->settingsStub()), $clients, $entities, new \Okay\Modules\Sviat\MerchantApi\Sync\Clock(), TestLocks::busy())->poll(manual: true));
         $this->assertSame(['Shop — API UA'], array_column($settings->sourcesCache()['sources'], 'display_name'));
     }
 

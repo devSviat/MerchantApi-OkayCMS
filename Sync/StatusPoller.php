@@ -28,11 +28,20 @@ class StatusPoller
         private MerchantClientFactory $clients,
         private EntityFactory $entityFactory,
         private Clock $clock,
+        private ModuleLock $lock,
     ) {
     }
 
-    /** @param bool $manual кнопка в адмінці: лише читання, тож пауза її не зупиняє */
-    public function poll(bool $manual = false): void
+    /**
+     * @param bool $manual кнопка в адмінці: лише читання, тож пауза її не зупиняє
+     * @return bool false — опитування вже йде в іншому процесі
+     */
+    public function poll(bool $manual = false): bool
+    {
+        return $this->lock->run(ModuleLock::STATUS_POLL, fn() => $this->pollLocked($manual));
+    }
+
+    private function pollLocked(bool $manual): void
     {
         $this->pruneRuns();
 

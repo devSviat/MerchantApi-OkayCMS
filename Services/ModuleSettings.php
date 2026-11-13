@@ -46,6 +46,28 @@ class ModuleSettings
         return $valid || $accountId === null;
     }
 
+    /** Проєкт Google Cloud, для якого реєстрацію вже зроблено (або доведено робочим запитом до API). */
+    public function registeredProject(): ?string
+    {
+        $value = $this->string('registered_project');
+
+        return $value === '' ? null : $value;
+    }
+
+    public function setRegisteredProject(string $projectId): void
+    {
+        $this->settings->set(self::PREFIX . 'registered_project', $projectId);
+    }
+
+    /**
+     * Реєстрація дає вписаному email роль у Merchant Center, тож відкрита лише для ще не зареєстрованого
+     * проєкту поточного ключа: ключ з іншого проєкту треба реєструвати знову.
+     */
+    public static function registrationOpen(?string $keyProject, ?string $registeredProject): bool
+    {
+        return $keyProject !== null && $keyProject !== $registeredProject;
+    }
+
     /** Корінь сайту для посилань у CLI (https://host[:port][/subdir]). */
     public function siteUrl(): ?string
     {

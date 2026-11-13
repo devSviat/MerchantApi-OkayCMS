@@ -24,6 +24,7 @@ use Okay\Modules\Sviat\MerchantApi\Http\CurlTransport;
 use Okay\Modules\Sviat\MerchantApi\Sync\Clock;
 use Okay\Modules\Sviat\MerchantApi\Sync\EntityRunLog;
 use Okay\Modules\Sviat\MerchantApi\Sync\EntityStateStore;
+use Okay\Modules\Sviat\MerchantApi\Sync\ModuleLock;
 use Okay\Modules\Sviat\MerchantApi\Sync\StatusPoller;
 use Okay\Modules\Sviat\MerchantApi\Sync\SyncRunner;
 
@@ -94,6 +95,14 @@ return [
             new SR(MerchantClientFactory::class),
             new SR(EntityFactory::class),
             new SR(Clock::class),
+            new SR(ModuleLock::class),
+        ],
+    ],
+    ModuleLock::class => [
+        'class' => ModuleLock::class,
+        'arguments' => [
+            new SR(Database::class),
+            new SR(QueryFactory::class),
         ],
     ],
     CatalogStats::class => [
